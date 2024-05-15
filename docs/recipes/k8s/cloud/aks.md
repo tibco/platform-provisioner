@@ -33,7 +33,10 @@ Environment variables that need to set in the recipe:
 meta:
   globalEnvVariable:
     GITHUB_TOKEN: "" # You need to set GITHUB_TOKEN for CP dev in private repo
+    TP_RESOURCE_GROUP: ""
+    TP_AUTHORIZED_IP: "" # Your public IP
     TP_CLUSTER_NAME: ""
+    TP_DOMAIN: ""
 ```
 
 ## Deploy TIBCO Control Plane on AKS
@@ -55,14 +58,15 @@ Environment variables that need to set in the recipe:
 meta:
   globalEnvVariable:
     GITHUB_TOKEN: "" # You need to set GITHUB_TOKEN for CP dev in private repo
+    
+    CP_PROVIDER: "azure"
+    CP_CLUSTER_NAME: ""
+    CP_DNS_DOMAIN: ""
+    CP_STORAGE_CLASS: ""
+
     # container registry
     CP_CONTAINER_REGISTRY: "" # use jFrog for CP production deployment
     CP_CONTAINER_REGISTRY_USERNAME: ""
     CP_CONTAINER_REGISTRY_PASSWORD: ""
-
-    CP_CLUSTER_NAME: ""
-    CP_PROVIDER: "azure"
-    CP_DNS_DOMAIN: ""
-    CP_STORAGE_CLASS: ""
 ```
 

@@ -43,13 +43,13 @@ meta:
     TP_SCRIPT_BRANCH: main
     TP_SCRIPT_NAME_SH_EKS: create-eks.sh # the script that DP will run
     TP_SCRIPT_NAME_SH_EFS: create-efs.sh # the script that DP will run
+    TP_INSTALL_POSTGRES: ${GUI_TP_INSTALL_POSTGRES:-true}
+    TP_ENABLE_O11Y_DAEMONSET: ${GUI_TP_ENABLE_O11Y_DAEMONSET:-true}
     # Do not change, variables to configure nginx/kong related resources based on ingressclass passed
     TP_ENABLE_NGINX: $([[ "$TP_INGRESS_CLASS" == "nginx" ]] && echo "true" || echo "false")
     TP_ENABLE_KONG: $([[ "$TP_INGRESS_CLASS" == "kong" ]] && echo "true" || echo "false")
     TP_HTTP_INGRESS_BACKEND_SERVICE: ${TP_INGRESS_RELEASE_NAME}-$( ( [[  "$TP_INGRESS_CLASS" == "nginx" ]] && echo "ingress-nginx-controller" ) || ( [[ "$TP_INGRESS_CLASS" == "kong" ]] && echo "kong-proxy" ) )
     TP_INSTALL_O11Y: ${GUI_TP_INSTALL_O11Y:-false}
-    TP_INSTALL_POSTGRES: ${GUI_TP_INSTALL_POSTGRES:-true}
-    TP_ENABLE_O11Y_DAEMONSET: ${GUI_TP_ENABLE_O11Y_DAEMONSET:-true}
   tools:
     yq: "4.40"
     helm: "3.13"
@@ -295,21 +295,6 @@ helmCharts:
     wait: true
     timeout: 1h
     createNamespace: true
-- name: eck-operator
-  version: 2.10.0
-  condition: ${TP_INSTALL_O11Y}
-  repo:
-    helm:
-      url: https://helm.elastic.co
-  cluster:
-    names:
-      - ${TP_CLUSTER_NAME}
-  releaseName: eck-operator
-  namespace: elastic-system
-  flags:
-    wait: true
-    timeout: 1h
-    createNamespace: true
 - name: postgresql
   version: 11.9.13 # 14.3.3 use postgresql 16.2.0, 11.9.13 use postgresql 14.5.0 PCP-4922
   namespace: tibco-ext
@@ -334,6 +319,21 @@ helmCharts:
   flags:
     createNamespace: true
     timeout: 1h
+- name: eck-operator
+  version: 2.10.0
+  condition: ${TP_INSTALL_O11Y}
+  repo:
+    helm:
+      url: https://helm.elastic.co
+  cluster:
+    names:
+      - ${TP_CLUSTER_NAME}
+  releaseName: eck-operator
+  namespace: elastic-system
+  flags:
+    wait: true
+    timeout: 1h
+    createNamespace: true
 - name: dp-config-es
   version: "1.0.17"
   condition: ${TP_INSTALL_O11Y}

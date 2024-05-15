@@ -24,6 +24,7 @@ meta:
     TP_AUTHORIZED_IP: "" # your ip x.x.x.x/32
     # basic cluster env
     TP_CLUSTER_NAME: ${GUI_TP_CLUSTER_NAME}
+    CLUSTER_NAME: ${TP_CLUSTER_NAME} # pipeline aks internal variable
     TP_CLUSTER_VERSION: ${GUI_TP_CLUSTER_VERSION:-1.29}
     TP_AZURE_REGION: ${GUI_TP_AZURE_REGION:-"westus2"} # the default region for the azure account
     # domain
@@ -44,11 +45,12 @@ meta:
     TP_STORAGE_ACCOUNT_RESOURCE_GROUP: "" # replace with name of storage account resource group 🚧 (TIBCO Account value)
     # o11y
     TP_ES_RELEASE_NAME: "dp-config-es" # name of dp-config-es release name
-    # recipe env
+    # flow control
     TP_INSTALL_K8S: true # change to true to install k8s
     TP_INSTALL_RESOURCE_FOLDER: "/workspace/resources"
     TP_INSTALL_CHART_VALUES_FILE: "/workspace/resources/global-values.yaml"
     TP_SCRIPT_BRANCH: main
+    TP_INSTALL_POSTGRES: ${GUI_TP_INSTALL_POSTGRES:-true}
     # Do not change, variables to configure nginx/kong related resources based on ingressclass passed
     TP_ENABLE_NGINX: $([[ "$TP_INGRESS_CLASS" == "nginx" ]] && echo "true" || echo "false")
     TP_ENABLE_KONG: $([[ "$TP_INGRESS_CLASS" == "kong" ]] && echo "true" || echo "false")
@@ -89,7 +91,7 @@ preTasks:
       az extension add --name aks-preview
       az extension update --name aks-preview
       chmod +x aks-cluster-create.sh
-      ./aks-cluster-create.sh
+      ./create-aks.sh
 - condition: ${TP_INSTALL_K8S}
   repo:
     git:
@@ -165,7 +167,6 @@ helmCharts:
       url: ${TP_CHART_REPO}
   values:
     keepPrevious: true
-    applyTibcoGlobal: true
     base64Encoded: false
     content: |
       global:
@@ -277,7 +278,6 @@ helmCharts:
       url: ${TP_CHART_REPO}
   values:
     keepPrevious: true
-    applyTibcoGlobal: true
     base64Encoded: false
     content: |
       dns:
@@ -323,6 +323,30 @@ helmCharts:
     wait: true
     timeout: 1h
     createNamespace: true
+- name: postgresql
+  version: 11.9.13 # 14.3.3 use postgresql 16.2.0, 11.9.13 use postgresql 14.5.0 PCP-4922
+  namespace: tibco-ext
+  releaseName: postgresql
+  condition: ${TP_INSTALL_POSTGRES}
+  repo:
+    helm:
+      url: https://charts.bitnami.com/bitnami
+  cluster:
+    names:
+      - ${TP_CLUSTER_NAME}
+  values:
+    keepPrevious: true
+    content: |
+      auth:
+        postgresPassword: postgres
+        username: postgres
+        password: postgres
+        database: "postgres"
+      persistence:
+        storageClass: ${TP_STORAGE_CLASS}
+  flags:
+    createNamespace: true
+    timeout: 1h
 - name: eck-operator
   version: 2.10.0
   repo:
