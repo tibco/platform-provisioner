@@ -1,0 +1,167 @@
+#
+# Copyright © 2024. Cloud Software Group, Inc.
+# This file is subject to the license terms contained
+# in the license file that is distributed with this file.
+#
+
+pipelineName: "Deploy Data Plane On-Prem Stack"
+description: |
+  This pipeline will deploy third party supporting tools for on-prem use case
+options:
+  - name: "GUI_DP_DOMAIN"
+    type: string
+    guiType: input
+    reference: "meta.guiEnv.GUI_DP_DOMAIN"
+    description: "normally we use localhost as on-perm domain. The service will be like: https://kibana.localhost/"
+  - name: "Install Nginx Ingress"
+    type: boolean
+    guiType: checkbox
+    reference: "meta.guiEnv.GUI_DP_INSTALL_NGINX_INGRESS"
+  - name: "Install Traefik Ingress"
+    type: boolean
+    guiType: checkbox
+    reference: "meta.guiEnv.GUI_DP_INSTALL_TRAEFIK_INGRESS"
+    description: "Traefik dashboard will be available at: https://dashboard.localhost/dashboard/#/"
+  - name: "GUI_PIPELINE_LOG_DEBUG"
+    type: boolean
+    guiType: checkbox
+    reference: "meta.guiEnv.GUI_PIPELINE_LOG_DEBUG"
+recipe: |
+  apiVersion: v1
+  kind: helm-install
+  meta:
+    guiEnv:
+      note: "deploy-dp-on-prem"
+      GUI_DP_INSTALL_NGINX_INGRESS: true
+      GUI_DP_INSTALL_TRAEFIK_INGRESS: false
+      GUI_DP_DOMAIN: "localhost"
+      GUI_PIPELINE_LOG_DEBUG: false
+    globalEnvVariable:
+      REPLACE_RECIPE: true
+      PIPELINE_LOG_DEBUG: ${GUI_PIPELINE_LOG_DEBUG}
+      PIPELINE_CHECK_DOCKER_STATUS: false
+      # env
+      DP_CLUSTER_NAME: on-prem
+      # domain
+      DP_INSTALL_NGINX_INGRESS: ${GUI_DP_INSTALL_NGINX_INGRESS:-"true"}
+      DP_INGRESS_NAMESPACE: ingress-system
+      DP_DOMAIN: ${GUI_DP_DOMAIN:-"localhost"}
+      DP_INSTALL_TRAEFIK_INGRESS: ${GUI_DP_INSTALL_TRAEFIK_INGRESS:-"false"}
+      DP_INGRESS_SERVICE_TYPE: LoadBalancer # NodePort for kind, LoadBalancer for others
+    tools:
+      yq: "4.40"
+      helm: "3.13"
+      kubectl: "1.28"
+  helmCharts:
+    - condition: true
+      name: cert-manager
+      version: v1.13.2 # release: https://github.com/cert-manager/cert-manager/releases
+      repo:
+        helm:
+          url: https://charts.jetstack.io
+      values:
+        keepPrevious: true
+        content: |
+          installCRDs: true
+          serviceAccount:
+            create: true
+            name: cert-manager
+      cluster:
+        names:
+          - ${DP_CLUSTER_NAME}
+      releaseName: cert-manager
+      namespace: cert-manager
+      flags:
+        wait: true
+        timeout: 1h
+        createNamespace: true
+    - condition: true
+      name: metrics-server
+      version: "3.12.0"
+      repo:
+        helm:
+          url: https://kubernetes-sigs.github.io/metrics-server/
+      values:
+        keepPrevious: true
+        content: |
+          clusterName: ${DP_CLUSTER_NAME}
+          serviceAccount:
+            create: true
+            name: metrics-server
+          args:
+            - "--kubelet-insecure-tls" # https://github.com/docker/for-mac/issues/6274#issuecomment-1259624307
+            - "--metric-resolution=90s"
+      cluster:
+        names:
+          - ${DP_CLUSTER_NAME}
+      releaseName: metrics-server
+      namespace: kube-system
+      flags:
+        wait: true
+        timeout: 1h
+        createNamespace: true
+    - condition: ${DP_INSTALL_TRAEFIK_INGRESS}
+      name: traefik
+      namespace: ${DP_INGRESS_NAMESPACE}
+      version: "26.1.0"
+      repo:
+        helm:
+          url: https://traefik.github.io/charts
+      values:
+        content: |
+          # traefik doc: https://doc.traefik.io/traefik/
+          # release: https://github.com/traefik/traefik-helm-chart/releases
+          # chart values: https://github.com/traefik/traefik-helm-chart/blob/master/traefik/values.yaml
+          hub: # for hub
+            enabled: true
+          service: # for external-dns
+            annotations:
+              external-dns.alpha.kubernetes.io/hostname: dashboard.${DP_DOMAIN}
+          ingressRoute: # for dashboard http://dashboard.localhost/dashboard/#/
+            dashboard:
+              matchRule: Host(`dashboard.${DP_DOMAIN}`) && PathPrefix(`/dashboard`) || Host(`dashboard.${DP_DOMAIN}`) && PathPrefix(`/api`)
+              entryPoints:
+                - traefik
+                - web
+                - websecure
+          providers: # for external service
+            kubernetesIngress:
+              allowExternalNameServices: true
+          additionalArguments:
+            - '--serversTransport.insecureSkipVerify=true'
+      cluster:
+        names:
+          - ${DP_CLUSTER_NAME}
+      releaseName: traefik
+      flags:
+        wait: true
+        timeout: 1h
+        createNamespace: true
+    - condition: ${DP_INSTALL_NGINX_INGRESS}
+      name: ingress-nginx
+      namespace: ${DP_INGRESS_NAMESPACE}
+      version: 4.10.0 # release: https://github.com/kubernetes/ingress-nginx/releases
+      repo:
+        helm:
+          url: https://kubernetes.github.io/ingress-nginx
+      values:
+        keepPrevious: true
+        content: |
+          # ingress-nginx doc: https://docs.nginx.com/nginx-ingress-controller/
+          # ingress-nginx chart values: https://github.com/kubernetes/ingress-nginx/blob/main/charts/ingress-nginx/values.yaml
+          controller:
+            allowSnippetAnnotations: true # https://github.com/kubernetes/ingress-nginx/pull/10393
+            hostPort:
+              enabled: true # for kind
+            service:
+              type: ${DP_INGRESS_SERVICE_TYPE} # NodePort for kind, LoadBalancer for others
+            ingressClass:
+              - nginx
+      cluster:
+        names:
+          - dp-cluster
+      releaseName: ingress-nginx
+      flags:
+        wait: true
+        timeout: 1h
+        createNamespace: true

@@ -1,0 +1,74 @@
+name: Release Helm Charts
+
+# Do not change this
+concurrency: release-helm
+
+on:
+  push:
+    branches:
+      - 'main'
+      - 'releases/**'
+    paths:
+      - 'charts/**'
+
+env:
+  GH_RAW_LOCATION: raw.githubusercontent.com/tibco/platform-provisioner/gh-pages/
+
+jobs:
+  release:
+    permissions:
+      contents: write # to push chart release and create a release (helm/chart-releaser-action)
+      packages: write # needed for ghcr access
+
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          path: 'src'
+          fetch-depth: 0
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          path: 'dest'
+          ref: 'gh-pages'
+          fetch-depth: 0
+
+      - name: Install Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: '3.13.1'
+
+      - name: Package Helm Charts for private repo
+        shell: bash
+        run: |
+          _retCode=
+          _errors=
+          for d in $(find src/charts/ -type f -name 'Chart.yaml' | sed -r 's|/[^/]+$||' | sort | uniq);do
+            if ! helm dep up "${d}"; then
+              _retCode=1
+              echo "${d} chart dependency update failed"
+              _errors="${_errors} ${d} chart dependency update failed; "
+           else
+             if ! helm package "${d}" -u -d dest; then
+               _retCode=1
+               _errors="${_errors} ${d} chart packaging failed;"
+             fi
+            fi
+            done
+          if [[ ${_retCode} -ne 0 ]]; then
+            echo "error => ${_errors}"
+            exit 1
+          fi
+
+      - name: Push New Files under gh pages
+        shell: bash
+        working-directory: dest
+        run: |
+          helm repo index . --url "" --merge index.yaml
+          git config user.name "Helm Updater"
+          git config user.email "actions@users.noreply.github.com"
+          git add $(git ls-files -o --exclude-standard)
+          git add index.yaml
+          git commit -m "Updated from ref: $GITHUB_SHA"
+          git push
