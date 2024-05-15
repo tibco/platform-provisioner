@@ -9,6 +9,7 @@ apiVersion: v1
 kind: helm-install
 meta:
   globalEnvVariable:
+    # piepline env
     REPLACE_RECIPE: true
     PIPELINE_LOG_DEBUG: false
     PIPELINE_CHECK_DOCKER_STATUS: false
@@ -20,7 +21,7 @@ meta:
     TP_CLUSTER_VERSION: ${GUI_TP_CLUSTER_VERSION:-1.29}
     TP_CLUSTER_REGION: ${AWS_REGION:-us-west-2}
     # domain
-    TP_DOMAIN: ${GUI_TP_DOMAIN} # the star domain for main ingress <cp/dp-env>.${TP_SANDBOX}.dataplanes.pro
+    TP_DOMAIN: ${GUI_TP_DOMAIN} # the star domain for the main ingress <cp/dp-env>.${SANDBOX}.dataplanes.pro
     TP_CLUSTER_VPC_CIDR: "10.180.0.0/16"
     # ingress
     TP_MAIN_INGRESS_CONTROLLER: alb # traefik or traefik, alb for AWS ingress controller
@@ -52,6 +53,7 @@ meta:
   tools:
     yq: "4.40"
     helm: "3.13"
+    kubectl: "1.28"
 preTasks:
 - condition: ${TP_INSTALL_K8S}
   repo:

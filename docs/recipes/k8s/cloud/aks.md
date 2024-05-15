@@ -14,5 +14,55 @@ export PIPELINE_CHART_REPO="${GITHUB_TOKEN}@raw.githubusercontent.com/tibco/plat
 ./dev/platform-provisioner.sh
 ```
 
+### Create AKS cluster
 
+After making sure that the pipeline can access the AWS account, we can now use deploy-tp-aks.yaml recipe to create a new AKS for TIBCO Platform.
+
+```bash
+export GITHUB_TOKEN=""
+export PIPELINE_INPUT_RECIPE="docs/recipes/k8s/cloud/deploy-tp-aks.yaml"
+
+export PIPELINE_CHART_REPO="${GITHUB_TOKEN}@raw.githubusercontent.com/tibco/platform-provisioner/gh-pages/"
+./dev/platform-provisioner.sh
+```
+
+We now have a new AKS to be ready to deploy TIBCO Platform.
+
+Environment variables that need to set in the recipe:
+```yaml
+meta:
+  globalEnvVariable:
+    GITHUB_TOKEN: "" # You need to set GITHUB_TOKEN for CP dev in private repo
+    TP_CLUSTER_NAME: ""
+```
+
+## Deploy TIBCO Control Plane on AKS
+
+Make sure that your kubeconfig can connect to the target AKS cluster. Then we can install CP on minikube with the following command:
+
+```bash
+export GITHUB_TOKEN=""
+export PIPELINE_INPUT_RECIPE="docs/recipes/controlplane/tp-cp.yaml"
+
+export PIPELINE_CHART_REPO="${GITHUB_TOKEN}@raw.githubusercontent.com/tibco/platform-provisioner/gh-pages/"
+./dev/platform-provisioner.sh
+```
+
+By default; maildev will be installed. You can access maildev using: http://maildev.localhost.dataplanes.pro
+
+Environment variables that need to set in the recipe:
+```yaml
+meta:
+  globalEnvVariable:
+    GITHUB_TOKEN: "" # You need to set GITHUB_TOKEN for CP dev in private repo
+    # container registry
+    CP_CONTAINER_REGISTRY: "" # use jFrog for CP production deployment
+    CP_CONTAINER_REGISTRY_USERNAME: ""
+    CP_CONTAINER_REGISTRY_PASSWORD: ""
+
+    CP_CLUSTER_NAME: ""
+    CP_PROVIDER: "azure"
+    CP_DNS_DOMAIN: ""
+    CP_STORAGE_CLASS: ""
+```
 

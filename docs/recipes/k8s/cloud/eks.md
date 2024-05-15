@@ -32,6 +32,13 @@ export PIPELINE_CHART_REPO="${GITHUB_TOKEN}@raw.githubusercontent.com/tibco/plat
 
 We now have a new EKS to be ready to deploy TIBCO Platform.
 
+Environment variables that need to set in the recipe:
+```yaml
+meta:
+  globalEnvVariable:
+    GITHUB_TOKEN: "" # You need to set GITHUB_TOKEN for CP dev in private repo
+    TP_CLUSTER_NAME: ""
+```
 
 ## Deploy TIBCO Control Plane on EKS
 
@@ -55,7 +62,7 @@ meta:
   globalEnvVariable:
     GITHUB_TOKEN: "" # You need to set GITHUB_TOKEN for CP dev in private repo
     # container registry
-    CP_CONTAINER_REGISTRY: "reldocker.tibco.com" # use jFrog for CP production deployment
+    CP_CONTAINER_REGISTRY: "" # use jFrog for CP production deployment
     CP_CONTAINER_REGISTRY_USERNAME: ""
     CP_CONTAINER_REGISTRY_PASSWORD: ""
 

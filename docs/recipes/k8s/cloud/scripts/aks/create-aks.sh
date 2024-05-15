@@ -1,5 +1,9 @@
 #!/bin/bash
-set +x
+
+#
+# Copyright (c) 2024 TIBCO Software Inc.
+# All Rights Reserved. Confidential & Proprietary.
+#
 
 #######################################
 # pre-aks-cluster-script - create pre-requisites for AKS cluster
