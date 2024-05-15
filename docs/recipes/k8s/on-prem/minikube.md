@@ -6,7 +6,7 @@ command to start minikube:
 
 in Mac:
 ```bash
-minikube start --cpus=4 --memory 15360 --disk-size "40g" \
+minikube start --cpus=4 --memory 20480 --disk-size "40g" \
 --driver=docker \
 --addons storage-provisioner
 ```

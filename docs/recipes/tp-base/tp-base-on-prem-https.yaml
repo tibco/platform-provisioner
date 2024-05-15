@@ -4,7 +4,12 @@
 # in the license file that is distributed with this file.
 #
 
-# export PIPELINE_INPUT_RECIPE=
+# Recipe for installing TIBCO Platform Control Plane on-premises
+# This recipe provides a basic thrird-party tools that needed for TIBCO Platform Control Plane
+# cert-manager
+# metrics-server
+# ingress-nginx
+# postgresql
 apiVersion: v1
 kind: helm-install
 meta:
@@ -13,21 +18,35 @@ meta:
     PIPELINE_LOG_DEBUG: false
     PIPELINE_CHECK_DOCKER_STATUS: false
     # env
-    DP_CLUSTER_NAME: on-prem
+    TP_CLUSTER_NAME: ${GUI_TP_CLUSTER_NAME:-"on-prem"}
     # domain
-    DP_INSTALL_NGINX_INGRESS: ${GUI_DP_INSTALL_NGINX_INGRESS:-"true"}
-    DP_INGRESS_NAMESPACE: ingress-system
-    DP_DOMAIN: ${GUI_DP_DOMAIN:-"localhost.dataplanes.pro"}
-    DP_INSTALL_TRAEFIK_INGRESS: ${GUI_DP_INSTALL_TRAEFIK_INGRESS:-"false"}
-    DP_INGRESS_SERVICE_TYPE: NodePort # LoadBalancer
-    DP_TLS_CERT: ${GUI_DP_TLS_CERT}
-    DP_TLS_KEY: ${GUI_DP_TLS_KEY}
+    TP_INSTALL_NGINX_INGRESS: ${GUI_TP_INSTALL_NGINX_INGRESS:-"true"}
+    TP_INGRESS_NAMESPACE: ingress-system
+    TP_DNS_DOMAIN: ${GUI_TP_DNS_DOMAIN:-"localhost.dataplanes.pro"}
+    TP_INGRESS_SERVICE_TYPE: ClusterIP # LoadBalancer used for minikube with tunel, NodePort used for kind, ClusterIP used for kubectl port-forward
+    TP_INGRESS_USE_HOSTPORT: false # true for kind
+    TP_INSTALL_TRAEFIK_INGRESS: ${GUI_TP_INSTALL_TRAEFIK_INGRESS:-"false"}
+    TP_TLS_CERT: ${GUI_TP_TLS_CERT}
+    TP_TLS_KEY: ${GUI_TP_TLS_KEY}
+    # storage
+    TP_STORAGE_CLASS: ${GUI_TP_STORAGE_CLASS:-"standard"} # hostpath for docker for mac, standard for minikube and kind, microk8s-hostpath for microk8s
+    # third party
+    TP_EXT_NAMESPACE: tibco-ext
+    # CP DB setup env
+    TP_INSTALL_POSTGRES: true
+    TP_DB_USER_NAME: ${GUI_TP_DB_USER_NAME:-"postgres"} # TP_RDS_USERNAME in create-rds.sh
+    TP_DB_PASSWORD: ${GUI_TP_DB_PASSWORD:-"postgres"} # TP_RDS_MASTER_PASSWORD in create-rds.sh
+    TP_DB_NAME: postgres
+    TP_DB_SECRET_NAME: provider-cp-database-credentials # not used
+    # flow control
+    TP_INSTALL_CERT_MANAGER: true
+    TP_INSTALL_METRICS_SERVER: true
   tools:
     yq: "4.40"
     helm: "3.13"
     kubectl: "1.28"
 helmCharts:
-- condition: true
+- condition: ${TP_INSTALL_CERT_MANAGER}
   name: cert-manager
   version: v1.13.2 # release: https://github.com/cert-manager/cert-manager/releases
   repo:
@@ -42,35 +61,14 @@ helmCharts:
         name: cert-manager
   cluster:
     names:
-      - ${DP_CLUSTER_NAME}
+      - ${TP_CLUSTER_NAME}
   releaseName: cert-manager
   namespace: cert-manager
   flags:
     wait: true
     timeout: 1h
     createNamespace: true
-- condition: false
-  name: external-dns
-  version: 1.13.1
-  repo:
-    helm:
-      url: https://kubernetes-sigs.github.io/external-dns/
-  values:
-    keepPrevious: true
-    content: |
-      serviceAccount:
-        create: true
-        name: external-dns
-  cluster:
-    names:
-      - ${DP_CLUSTER_NAME}
-  releaseName: external-dns
-  namespace: external-dns-system
-  flags:
-    wait: true
-    timeout: 1h
-    createNamespace: true
-- condition: true
+- condition: ${TP_INSTALL_METRICS_SERVER}
   name: metrics-server
   version: "3.12.0"
   repo:
@@ -79,7 +77,7 @@ helmCharts:
   values:
     keepPrevious: true
     content: |
-      clusterName: ${DP_CLUSTER_NAME}
+      clusterName: ${TP_CLUSTER_NAME}
       serviceAccount:
         create: true
         name: metrics-server
@@ -88,16 +86,16 @@ helmCharts:
         - "--metric-resolution=90s"
   cluster:
     names:
-      - ${DP_CLUSTER_NAME}
+      - ${TP_CLUSTER_NAME}
   releaseName: metrics-server
   namespace: kube-system
   flags:
     wait: true
     timeout: 1h
     createNamespace: true
-- condition: ${DP_INSTALL_TRAEFIK_INGRESS}
+- condition: ${TP_INSTALL_TRAEFIK_INGRESS}
   name: traefik
-  namespace: ${DP_INGRESS_NAMESPACE}
+  namespace: ${TP_INGRESS_NAMESPACE}
   version: "26.1.0"
   repo:
     helm:
@@ -111,10 +109,10 @@ helmCharts:
         enabled: true
       service: # for external-dns
         annotations:
-          external-dns.alpha.kubernetes.io/hostname: dashboard.${DP_DOMAIN}
+          external-dns.alpha.kubernetes.io/hostname: dashboard.${TP_DNS_DOMAIN}
       ingressRoute: # for dashboard http://dashboard.localhost/dashboard/#/
         dashboard:
-          matchRule: Host(`dashboard.${DP_DOMAIN}`) && PathPrefix(`/dashboard`) || Host(`dashboard.${DP_DOMAIN}`) && PathPrefix(`/api`)
+          matchRule: Host(`dashboard.${TP_DNS_DOMAIN}`) && PathPrefix(`/dashboard`) || Host(`dashboard.${TP_DNS_DOMAIN}`) && PathPrefix(`/api`)
           entryPoints:
             - traefik
             - web
@@ -130,7 +128,7 @@ helmCharts:
             secretName: default-certificate
   cluster:
     names:
-      - ${DP_CLUSTER_NAME}
+      - ${TP_CLUSTER_NAME}
   releaseName: traefik
   flags:
     wait: true
@@ -142,21 +140,21 @@ helmCharts:
       base64Encoded: false
       skip: false
       content: |
-        kubectl create ns ${DP_INGRESS_NAMESPACE}
+        kubectl create ns ${TP_INGRESS_NAMESPACE}
         kubectl apply -f - <<EOF
         apiVersion: v1
         kind: Secret
         metadata:
           name: default-certificate
-          namespace: ${DP_INGRESS_NAMESPACE}
+          namespace: ${TP_INGRESS_NAMESPACE}
         type: Opaque
         data:
-          tls.crt: ${DP_TLS_CERT}
-          tls.key: ${DP_TLS_KEY}
+          tls.crt: ${TP_TLS_CERT}
+          tls.key: ${TP_TLS_KEY}
         EOF
-- condition: ${DP_INSTALL_NGINX_INGRESS}
+- condition: ${TP_INSTALL_NGINX_INGRESS}
   name: ingress-nginx
-  namespace: ${DP_INGRESS_NAMESPACE}
+  namespace: ${TP_INGRESS_NAMESPACE}
   version: 4.10.0 # release: https://github.com/kubernetes/ingress-nginx/releases
   repo:
     helm:
@@ -169,16 +167,16 @@ helmCharts:
       controller:
         allowSnippetAnnotations: true # https://github.com/kubernetes/ingress-nginx/pull/10393
         hostPort:
-          enabled: true # for kind
+          enabled: ${TP_INGRESS_USE_HOSTPORT} # true for kind
         service:
-          type: ${DP_INGRESS_SERVICE_TYPE} # NodePort for kind, LoadBalancer for others
+          type: ${TP_INGRESS_SERVICE_TYPE} # NodePort for kind, LoadBalancer for others
         ingressClass:
           - nginx
         extraArgs:
-          default-ssl-certificate: ${DP_INGRESS_NAMESPACE}/default-certificate
+          default-ssl-certificate: ${TP_INGRESS_NAMESPACE}/default-certificate
   cluster:
     names:
-      - dp-cluster
+      - ${TP_CLUSTER_NAME}
   releaseName: ingress-nginx
   flags:
     wait: true
@@ -190,15 +188,39 @@ helmCharts:
       base64Encoded: false
       skip: false
       content: |
-        kubectl create ns ${DP_INGRESS_NAMESPACE}
+        kubectl create ns ${TP_INGRESS_NAMESPACE}
         kubectl apply -f - <<EOF
         apiVersion: v1
         kind: Secret
         metadata:
           name: default-certificate
-          namespace: ${DP_INGRESS_NAMESPACE}
+          namespace: ${TP_INGRESS_NAMESPACE}
         type: Opaque
         data:
-          tls.crt: ${DP_TLS_CERT}
-          tls.key: ${DP_TLS_KEY}
+          tls.crt: ${TP_TLS_CERT}
+          tls.key: ${TP_TLS_KEY}
         EOF
+- name: postgresql
+  version: 11.9.13 # 14.3.3 use postgresql 16.2.0, 11.9.13 use postgresql 14.5.0 PCP-4922
+  namespace: ${TP_EXT_NAMESPACE}
+  releaseName: postgresql
+  condition: ${TP_INSTALL_POSTGRES}
+  repo:
+    helm:
+      url: https://charts.bitnami.com/bitnami
+  cluster:
+    names:
+      - ${TP_CLUSTER_NAME}
+  values:
+    keepPrevious: true
+    content: |
+      auth:
+        postgresPassword: ${TP_DB_PASSWORD}
+        username: ${TP_DB_USER_NAME}
+        password: ${TP_DB_PASSWORD}
+        database: "${TP_DB_NAME}"
+      persistence:
+        storageClass: ${TP_STORAGE_CLASS}
+  flags:
+    createNamespace: true
+    timeout: 1h

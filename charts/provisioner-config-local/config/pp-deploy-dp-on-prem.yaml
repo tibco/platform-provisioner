@@ -8,19 +8,19 @@ pipelineName: "Deploy Data Plane On-Prem Stack"
 description: |
   This pipeline will deploy third party supporting tools for on-prem use case
 options:
-  - name: "GUI_DP_DOMAIN"
+  - name: "GUI_TP_DNS_DOMAIN"
     type: string
     guiType: input
-    reference: "meta.guiEnv.GUI_DP_DOMAIN"
+    reference: "meta.guiEnv.GUI_TP_DNS_DOMAIN"
     description: "normally we use localhost as on-perm domain. The service will be like: https://kibana.localhost/"
   - name: "Install Nginx Ingress"
     type: boolean
     guiType: checkbox
-    reference: "meta.guiEnv.GUI_DP_INSTALL_NGINX_INGRESS"
+    reference: "meta.guiEnv.GUI_TP_INSTALL_NGINX_INGRESS"
   - name: "Install Traefik Ingress"
     type: boolean
     guiType: checkbox
-    reference: "meta.guiEnv.GUI_DP_INSTALL_TRAEFIK_INGRESS"
+    reference: "meta.guiEnv.GUI_TP_INSTALL_TRAEFIK_INGRESS"
     description: "Traefik dashboard will be available at: https://dashboard.localhost/dashboard/#/"
   - name: "GUI_PIPELINE_LOG_DEBUG"
     type: boolean
@@ -32,28 +32,42 @@ recipe: |
   meta:
     guiEnv:
       note: "deploy-dp-on-prem"
-      GUI_DP_INSTALL_NGINX_INGRESS: true
-      GUI_DP_INSTALL_TRAEFIK_INGRESS: false
-      GUI_DP_DOMAIN: "localhost"
+      GUI_TP_INSTALL_NGINX_INGRESS: true
+      GUI_TP_INSTALL_TRAEFIK_INGRESS: false
+      GUI_TP_DNS_DOMAIN: "localhost"
       GUI_PIPELINE_LOG_DEBUG: false
     globalEnvVariable:
       REPLACE_RECIPE: true
       PIPELINE_LOG_DEBUG: ${GUI_PIPELINE_LOG_DEBUG}
       PIPELINE_CHECK_DOCKER_STATUS: false
       # env
-      DP_CLUSTER_NAME: on-prem
+      TP_CLUSTER_NAME: ${GUI_TP_CLUSTER_NAME:-"on-prem"}
       # domain
-      DP_INSTALL_NGINX_INGRESS: ${GUI_DP_INSTALL_NGINX_INGRESS:-"true"}
-      DP_INGRESS_NAMESPACE: ingress-system
-      DP_DOMAIN: ${GUI_DP_DOMAIN:-"localhost"}
-      DP_INSTALL_TRAEFIK_INGRESS: ${GUI_DP_INSTALL_TRAEFIK_INGRESS:-"false"}
-      DP_INGRESS_SERVICE_TYPE: LoadBalancer # NodePort for kind, LoadBalancer for others
+      TP_INSTALL_NGINX_INGRESS: ${GUI_TP_INSTALL_NGINX_INGRESS:-"true"}
+      TP_INGRESS_NAMESPACE: ingress-system
+      TP_DNS_DOMAIN: ${GUI_TP_DNS_DOMAIN:-"localhost"}
+      TP_INGRESS_SERVICE_TYPE: ${GUI_TP_INGRESS_SERVICE_TYPE:-ClusterIP} # LoadBalancer used for minikube with tunel, NodePort used for kind, ClusterIP used for kubectl port-forward
+      TP_INGRESS_USE_HOSTPORT: ${GUI_TP_INGRESS_USE_HOSTPORT:-false} # true for kind
+      TP_INSTALL_TRAEFIK_INGRESS: ${GUI_TP_INSTALL_TRAEFIK_INGRESS:-"false"}
+      # storage
+      TP_STORAGE_CLASS: ${GUI_TP_STORAGE_CLASS:-"standard"} # hostpath for docker for mac, standard for minikube and kind, microk8s-hostpath for microk8s
+      # third party
+      TP_EXT_NAMESPACE: tibco-ext
+      # CP DB setup env
+      TP_INSTALL_POSTGRES: false
+      TP_DB_USER_NAME: ${GUI_TP_DB_USER_NAME:-"postgres"} # TP_RDS_USERNAME in create-rds.sh
+      TP_DB_PASSWORD: ${GUI_TP_DB_PASSWORD:-"postgres"} # TP_RDS_MASTER_PASSWORD in create-rds.sh
+      TP_DB_NAME: postgres
+      TP_DB_SECRET_NAME: provider-cp-database-credentials # not used
+      # flow control
+      TP_INSTALL_CERT_MANAGER: true
+      TP_INSTALL_METRICS_SERVER: true
     tools:
       yq: "4.40"
       helm: "3.13"
       kubectl: "1.28"
   helmCharts:
-    - condition: true
+    - condition: ${TP_INSTALL_CERT_MANAGER}
       name: cert-manager
       version: v1.13.2 # release: https://github.com/cert-manager/cert-manager/releases
       repo:
@@ -68,14 +82,14 @@ recipe: |
             name: cert-manager
       cluster:
         names:
-          - ${DP_CLUSTER_NAME}
+          - ${TP_CLUSTER_NAME}
       releaseName: cert-manager
       namespace: cert-manager
       flags:
         wait: true
         timeout: 1h
         createNamespace: true
-    - condition: true
+    - condition: ${TP_INSTALL_METRICS_SERVER}
       name: metrics-server
       version: "3.12.0"
       repo:
@@ -84,7 +98,7 @@ recipe: |
       values:
         keepPrevious: true
         content: |
-          clusterName: ${DP_CLUSTER_NAME}
+          clusterName: ${TP_CLUSTER_NAME}
           serviceAccount:
             create: true
             name: metrics-server
@@ -93,16 +107,16 @@ recipe: |
             - "--metric-resolution=90s"
       cluster:
         names:
-          - ${DP_CLUSTER_NAME}
+          - ${TP_CLUSTER_NAME}
       releaseName: metrics-server
       namespace: kube-system
       flags:
         wait: true
         timeout: 1h
         createNamespace: true
-    - condition: ${DP_INSTALL_TRAEFIK_INGRESS}
+    - condition: ${TP_INSTALL_TRAEFIK_INGRESS}
       name: traefik
-      namespace: ${DP_INGRESS_NAMESPACE}
+      namespace: ${TP_INGRESS_NAMESPACE}
       version: "26.1.0"
       repo:
         helm:
@@ -116,10 +130,10 @@ recipe: |
             enabled: true
           service: # for external-dns
             annotations:
-              external-dns.alpha.kubernetes.io/hostname: dashboard.${DP_DOMAIN}
+              external-dns.alpha.kubernetes.io/hostname: dashboard.${TP_DNS_DOMAIN}
           ingressRoute: # for dashboard http://dashboard.localhost/dashboard/#/
             dashboard:
-              matchRule: Host(`dashboard.${DP_DOMAIN}`) && PathPrefix(`/dashboard`) || Host(`dashboard.${DP_DOMAIN}`) && PathPrefix(`/api`)
+              matchRule: Host(`dashboard.${TP_DNS_DOMAIN}`) && PathPrefix(`/dashboard`) || Host(`dashboard.${TP_DNS_DOMAIN}`) && PathPrefix(`/api`)
               entryPoints:
                 - traefik
                 - web
@@ -131,15 +145,15 @@ recipe: |
             - '--serversTransport.insecureSkipVerify=true'
       cluster:
         names:
-          - ${DP_CLUSTER_NAME}
+          - ${TP_CLUSTER_NAME}
       releaseName: traefik
       flags:
         wait: true
         timeout: 1h
         createNamespace: true
-    - condition: ${DP_INSTALL_NGINX_INGRESS}
+    - condition: ${TP_INSTALL_NGINX_INGRESS}
       name: ingress-nginx
-      namespace: ${DP_INGRESS_NAMESPACE}
+      namespace: ${TP_INGRESS_NAMESPACE}
       version: 4.10.0 # release: https://github.com/kubernetes/ingress-nginx/releases
       repo:
         helm:
@@ -152,16 +166,40 @@ recipe: |
           controller:
             allowSnippetAnnotations: true # https://github.com/kubernetes/ingress-nginx/pull/10393
             hostPort:
-              enabled: true # for kind
+              enabled: ${TP_INGRESS_USE_HOSTPORT} # true for kind
             service:
-              type: ${DP_INGRESS_SERVICE_TYPE} # NodePort for kind, LoadBalancer for others
+              type: ${TP_INGRESS_SERVICE_TYPE} # NodePort for kind, LoadBalancer for others
             ingressClass:
               - nginx
       cluster:
         names:
-          - dp-cluster
+          - ${TP_CLUSTER_NAME}
       releaseName: ingress-nginx
       flags:
         wait: true
         timeout: 1h
         createNamespace: true
+    - name: postgresql
+      version: 11.9.13 # 14.3.3 use postgresql 16.2.0, 11.9.13 use postgresql 14.5.0 PCP-4922
+      namespace: ${TP_EXT_NAMESPACE}
+      releaseName: postgresql
+      condition: ${TP_INSTALL_POSTGRES}
+      repo:
+        helm:
+          url: https://charts.bitnami.com/bitnami
+      cluster:
+        names:
+          - ${TP_CLUSTER_NAME}
+      values:
+        keepPrevious: true
+        content: |
+          auth:
+            postgresPassword: ${TP_DB_PASSWORD}
+            username: ${TP_DB_USER_NAME}
+            password: ${TP_DB_PASSWORD}
+            database: "${TP_DB_NAME}"
+          persistence:
+            storageClass: ${TP_STORAGE_CLASS}
+      flags:
+        createNamespace: true
+        timeout: 1h
