@@ -44,6 +44,9 @@ menuConfig:
       - label: "Standard on-prem"
         to: "/pipelines/helm-install?title=cp-standard-on-prem"
         config: pp-deploy-cp-tools-on-prem.yaml
+      - label: "Standard on-prem with certificate"
+        to: "/pipelines/helm-install?title=cp-standard-on-prem-cert"
+        config: pp-deploy-cp-tools-on-prem-cert.yaml
     - label: "Deploy Control Plane"
       items:
       - label: "Standard Control Plane"

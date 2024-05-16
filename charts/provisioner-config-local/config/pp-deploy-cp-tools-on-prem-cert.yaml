@@ -4,14 +4,15 @@
 # in the license file that is distributed with this file.
 #
 
-pipelineName: "Deploy Data Plane On-Prem Stack with certificate"
+pipelineName: "Deploy Control Plane On-Prem Stack with certificate"
 description: |
   This pipeline will deploy supporting tools for on-prem use case with a validate certificate for main ingress
   We will use `localhost.dataplanes.pro` as domain for on-prem use case. This domain will point to `0.0.0.0`. 
   You can get validate public certificate from [Platform Provisioner](https://provisioner.cic2.tibcocloud.com/pipelines/generic-runner?title=certificate-localhost-dp)
-  We will have DP service as 
-  * `https://kibana.localhost.dataplanes.pro/`
-  * `https://flogo.localhost.dataplanes.pro/`
+  The certificate use Subject Alternative Name (SAN) with star domains for CP and DP services.
+  We will have CP service as 
+  * `https://*.cp1-my.localhost.dataplanes.pro/`
+  * `https://*.cp1-tunnel.localhost.dataplanes.pro/`
 options:
 - name: "GUI_TP_DNS_DOMAIN"
   type: string
@@ -48,7 +49,7 @@ recipe: |
   kind: helm-install
   meta:
     guiEnv:
-      note: "deploy-dp-on-prem-cert"
+      note: "deploy-cp-on-prem-cert"
       GUI_TP_INSTALL_NGINX_INGRESS: true
       GUI_TP_INSTALL_TRAEFIK_INGRESS: false
       GUI_TP_DNS_DOMAIN: "localhost.dataplanes.pro"
@@ -75,7 +76,7 @@ recipe: |
       # third party
       TP_EXT_NAMESPACE: tibco-ext
       # CP DB setup env
-      TP_INSTALL_POSTGRES: false
+      TP_INSTALL_POSTGRES: true
       TP_DB_USER_NAME: ${GUI_TP_DB_USER_NAME:-"postgres"} # TP_RDS_USERNAME in create-rds.sh
       TP_DB_PASSWORD: ${GUI_TP_DB_PASSWORD:-"postgres"} # TP_RDS_MASTER_PASSWORD in create-rds.sh
       TP_DB_NAME: postgres

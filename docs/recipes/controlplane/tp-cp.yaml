@@ -28,8 +28,7 @@ meta:
     CP_TUNNEL_DNS_DOMAIN: ${CP_INSTANCE_ID}-tunnel.${CP_DNS_DOMAIN}
     # storage
     CP_STORAGE_CLASS: ${GUI_CP_STORAGE_CLASS:-"standard"} # standard, gp2, hostpath, efs-sc
-    CP_STORAGE_CREATE_PV: false # create PV for control-plane-pv for Kind and MicroK8s use case
-    CP_STORAGE_PV_NAME: "" # control-plane-pv the name of PV for kind
+    CP_STORAGE_PV_NAME: "" # control-plane-pv the name of PV for kind, works with CP_STORAGE_CREATE_PV flag
     # container registry
     CP_CONTAINER_REGISTRY: "reldocker.tibco.com"
     CP_CONTAINER_REGISTRY_USERNAME: ""
@@ -40,8 +39,6 @@ meta:
     CP_ADMIN_EMAIL: ${GUI_CP_ADMIN_EMAIL:-"cp-test@gmail.com"}
     # third party
     CP_EXT_NAMESPACE: tibco-ext
-    CP_INSTALL_MAILDEV: true
-    CP_INSTALL_MAILDEV_INGRESS: true
     # network policies
     CP_CREATE_NETWORK_POLICIES: ${GUI_CP_CREATE_NETWORK_POLICIES:-false}
     # CP DB setup env
@@ -62,14 +59,21 @@ meta:
     CP_SKIP_BOOTSTRAP_INGRESS: false
     CP_ALB_CERTIFICATE_ARN: ""
     CP_NLB_CERTIFICATE_ARN: ""
+    TP_TLS_CERT: ""
+    TP_TLS_KEY: ""
     # flow control
+    CP_CREATE_NAMESPACE: true
+    CP_INSTALL_MAILDEV: true
+    CP_INSTALL_MAILDEV_INGRESS: true
+    CP_STORAGE_CREATE_PV: false # create PV for control-plane-pv for Kind and MicroK8s use case
     CP_INSTALL_PLATFORM_BOOTSTRAP: true
+    CP_INSTALL_PLATFORM_BASE: true
   tools:
     yq: "4.40"
     helm: "3.13"
     kubectl: "1.28"
 preTasks:
-- condition: true
+- condition: ${CP_CREATE_NAMESPACE}
   clusters:
     - name: ${CP_CLUSTER_NAME}
   script:
@@ -106,6 +110,21 @@ preTasks:
       type: Opaque
       EOF
       
+      # create TP TLS secret if provided
+      if [[ -n "${TP_TLS_CERT}" ]]; then
+        kubectl apply -f - <<EOF
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: tp-certificate
+        namespace: ${CP_NAMESPACE}
+      type: Opaque
+      data:
+        tls.crt: ${TP_TLS_CERT}
+        tls.key: ${TP_TLS_KEY}
+      EOF
+      fi
+      
       # add label to ext namespace
       kubectl apply -f - <<EOF
       apiVersion: v1
@@ -115,6 +134,21 @@ preTasks:
         labels:
           networking.platform.tibco.com/non-cp-ns: enable
       EOF
+      
+      # create TP TLS secret if provided
+      if [[ -n "${TP_TLS_CERT}" ]]; then
+        kubectl apply -f - <<EOF
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: tp-certificate
+        namespace: ${CP_EXT_NAMESPACE}
+      type: Opaque
+      data:
+        tls.crt: ${TP_TLS_CERT}
+        tls.key: ${TP_TLS_KEY}
+      EOF
+      fi
 - condition: ${CP_INSTALL_MAILDEV}
   clusters:
     - name: ${CP_CLUSTER_NAME}
@@ -188,7 +222,38 @@ preTasks:
     ignoreErrors: false
     fileName: script.sh
     content: |
-      kubectl apply -f - <<EOF
+      if [[ -n "${TP_TLS_CERT}" ]]; then
+        kubectl apply -f - <<EOF
+      kind: Ingress
+      apiVersion: networking.k8s.io/v1
+      metadata:
+        name: maildev
+        namespace: ${CP_EXT_NAMESPACE}
+        labels:
+          app.cloud.tibco.com/created-by: pipeline
+        annotations:
+          kubernetes.io/ingress.class: ${CP_INGRESS_CLASSNAME}
+          nginx.ingress.kubernetes.io/proxy-buffer-size: 16k
+      spec:
+        ingressClassName: ${CP_INGRESS_CLASSNAME}
+        tls:
+        - hosts:
+          - '*.${CP_DNS_DOMAIN}'
+          secretName: tp-certificate
+        rules:
+          - host: 'mail.${CP_DNS_DOMAIN}'
+            http:
+              paths:
+                - path: /
+                  pathType: Prefix
+                  backend:
+                    service:
+                      name: development-mailserver
+                      port:
+                        number: 1080
+      EOF      
+      else
+        kubectl apply -f - <<EOF
       kind: Ingress
       apiVersion: networking.k8s.io/v1
       metadata:
@@ -213,6 +278,7 @@ preTasks:
                       port:
                         number: 1080
       EOF
+      fi
 - condition: ${CP_STORAGE_CREATE_PV}
   clusters:
     - name: ${CP_CLUSTER_NAME}
@@ -334,7 +400,71 @@ helmCharts:
       base64Encoded: false
       skip: ${CP_SKIP_BOOTSTRAP_INGRESS}
       content: |
-        kubectl apply -f - <<EOF
+        if [[ -n "${TP_TLS_CERT}" ]]; then
+          kubectl apply -f - <<EOF
+        kind: Ingress
+        apiVersion: networking.k8s.io/v1
+        metadata:
+          name: router
+          namespace: ${CP_NAMESPACE}
+          labels:
+            app.cloud.tibco.com/created-by: pipeline
+            platform.tibco.com/controlplane-instance-id: ${CP_INSTANCE_ID}
+          annotations:
+            kubernetes.io/ingress.class: ${CP_INGRESS_CLASSNAME}
+            nginx.ingress.kubernetes.io/proxy-buffer-size: 16k
+        spec:
+          ingressClassName: ${CP_INGRESS_CLASSNAME}
+          tls:
+          - hosts:
+            - '*.${CP_SERVICE_DNS_DOMAIN}'
+            secretName: tp-certificate
+          rules:
+            - host: '*.${CP_SERVICE_DNS_DOMAIN}'
+              http:
+                paths:
+                  - path: /
+                    pathType: Prefix
+                    backend:
+                      service:
+                        name: router
+                        port:
+                          number: 100
+        EOF
+        
+          kubectl apply -f - <<EOF
+        kind: Ingress
+        apiVersion: networking.k8s.io/v1
+        metadata:
+          name: hybrid-proxy
+          namespace: ${CP_NAMESPACE}
+          labels:
+            app.cloud.tibco.com/created-by: pipeline
+            platform.tibco.com/controlplane-instance-id: ${CP_INSTANCE_ID}
+          annotations:
+            kubernetes.io/ingress.class: ${CP_INGRESS_CLASSNAME}
+            nginx.ingress.kubernetes.io/proxy-buffer-size: 16k
+        spec:
+          ingressClassName: ${CP_INGRESS_CLASSNAME}
+          tls:
+          - hosts:
+            - '*.${CP_SERVICE_DNS_DOMAIN}'
+            secretName: tp-certificate
+          rules:
+            - host: '*.${CP_TUNNEL_DNS_DOMAIN}'
+              http:
+                paths:
+                  - path: /
+                    pathType: Prefix
+                    backend:
+                      service:
+                        name: hybrid-proxy
+                        port:
+                          number: 105
+        EOF
+        
+        else
+          kubectl apply -f - <<EOF
         kind: Ingress
         apiVersion: networking.k8s.io/v1
         metadata:
@@ -361,7 +491,7 @@ helmCharts:
                           number: 100
         EOF
         
-        kubectl apply -f - <<EOF
+          kubectl apply -f - <<EOF
         kind: Ingress
         apiVersion: networking.k8s.io/v1
         metadata:
@@ -387,9 +517,10 @@ helmCharts:
                         port:
                           number: 105
         EOF
+        fi
 - name: platform-base
   version: ^1.0.0
-  condition: true
+  condition: ${CP_INSTALL_PLATFORM_BASE}
   repo:
     helm:
       url: ${CP_CHART_REPO}
