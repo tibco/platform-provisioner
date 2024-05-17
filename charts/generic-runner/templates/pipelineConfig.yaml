@@ -41,12 +41,8 @@ data:
             pipeline: "{{ .Values.pipelineRunTimeout }}"
             tasks: "{{ .Values.taskRunTimeout }}"
             finally: "{{ .Values.finallyTimout }}"
-          {{- if eq .Values.pipelineApiVersion "tekton.dev/v1beta1" }}
-          serviceAccountName: {{ .Values.serviceAccount }}
-          {{- else }}
           taskRunTemplate:
             serviceAccountName: {{ .Values.serviceAccount }}
-          {{- end }}
           pipelineRef:
             name: {{ .Values.name }}
 

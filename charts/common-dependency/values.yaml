@@ -15,7 +15,7 @@ createdBy: generator-v2
 # the matching label name for GUI to find this pipeline (Don't change)
 pipelineConfigLabel: pipeline-gui-config
 # the api version of the pipeline (Don't change)
-pipelineApiVersion: tekton.dev/v1beta1
+pipelineApiVersion: tekton.dev/v1
 # the docker image that the pipeline will be used to run
 pipelineImage: ""
 # the shared script configmap name
