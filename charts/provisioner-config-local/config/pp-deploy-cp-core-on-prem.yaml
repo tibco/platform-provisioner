@@ -56,6 +56,16 @@ options:
   guiType: input
   reference: "meta.guiEnv.GUI_TP_TLS_KEY"
   description: "base64 encoding of validate certificate for the domain You can get it from <a href='https://provisioner.cic2.tibcocloud.com/pipelines/generic-runner?title=certificate-localhost-dp' target='_blank'>Platform Provisioner</a>"
+- name: "GUI_CP_PLATFORM_BOOTSTRAP_VERSION"
+  type: string
+  guiType: input
+  reference: "meta.guiEnv.GUI_CP_PLATFORM_BOOTSTRAP_VERSION"
+  description: "The version of CP platform bootstrap. TP 1.2 GA release version is: 1.2.23. use ^1.0.0 for latest"
+- name: "GUI_CP_PLATFORM_BASE_VERSION"
+  type: string
+  guiType: input
+  reference: "meta.guiEnv.GUI_CP_PLATFORM_BASE_VERSION"
+  description: "The version of CP platform base. TP 1.2 GA release version is: 1.2.136. use ^1.0.0 for latest"
 - name: "GUI_CP_STORAGE_CLASS"
   type: string
   guiType: input
@@ -95,6 +105,9 @@ recipe: |
       # TLS
       GUI_TP_TLS_CERT: ""
       GUI_TP_TLS_KEY: ""
+      # version
+      GUI_CP_PLATFORM_BOOTSTRAP_VERSION: 1.2.23
+      GUI_CP_PLATFORM_BASE_VERSION: 1.2.136
       # storage
       GUI_CP_STORAGE_CLASS: standard
       GUI_CP_STORAGE_CREATE_PV: false
@@ -152,6 +165,9 @@ recipe: |
       CP_NLB_CERTIFICATE_ARN: ""
       TP_TLS_CERT: ${GUI_TP_TLS_CERT}
       TP_TLS_KEY: ${GUI_TP_TLS_KEY}
+      # CP version
+      CP_PLATFORM_BOOTSTRAP_VERSION: ${GUI_CP_PLATFORM_BOOTSTRAP_VERSION:-1.2.23} # 1.2 GA release. use ^1.0.0 for latest
+      CP_PLATFORM_BASE_VERSION: ${CP_PLATFORM_BASE_VERSION:-1.2.136} # 1.2 GA release. use ^1.0.0 for latest
       # flow control
       CP_CREATE_NAMESPACE: true
       CP_INSTALL_MAILDEV: true
@@ -396,7 +412,7 @@ recipe: |
           EOF
   helmCharts:
     - name: platform-bootstrap # router hybrid-proxy compute-service cp-evn certificates
-      version: ^1.0.0
+      version: ${CP_PLATFORM_BOOTSTRAP_VERSION}
       condition: ${CP_INSTALL_PLATFORM_BOOTSTRAP}
       repo:
         helm:
@@ -608,7 +624,7 @@ recipe: |
             EOF
             fi
     - name: platform-base
-      version: ^1.0.0
+      version: ${CP_PLATFORM_BASE_VERSION}
       condition: ${CP_INSTALL_PLATFORM_BASE}
       repo:
         helm:

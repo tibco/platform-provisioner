@@ -61,6 +61,9 @@ meta:
     CP_NLB_CERTIFICATE_ARN: ""
     TP_TLS_CERT: ""
     TP_TLS_KEY: ""
+    # CP version
+    CP_PLATFORM_BOOTSTRAP_VERSION: ${GUI_CP_PLATFORM_BOOTSTRAP_VERSION:-1.2.23} # 1.2 GA release. use ^1.0.0 for latest
+    CP_PLATFORM_BASE_VERSION: ${CP_PLATFORM_BASE_VERSION:-1.2.136} # 1.2 GA release. use ^1.0.0 for latest
     # flow control
     CP_CREATE_NAMESPACE: true
     CP_INSTALL_MAILDEV: true
@@ -305,7 +308,7 @@ preTasks:
       EOF
 helmCharts:
 - name: platform-bootstrap # router hybrid-proxy compute-service cp-evn certificates
-  version: ^1.0.0
+  version: ${CP_PLATFORM_BOOTSTRAP_VERSION}
   condition: ${CP_INSTALL_PLATFORM_BOOTSTRAP}
   repo:
     helm:
@@ -519,7 +522,7 @@ helmCharts:
         EOF
         fi
 - name: platform-base
-  version: ^1.0.0
+  version: ${CP_PLATFORM_BASE_VERSION}
   condition: ${CP_INSTALL_PLATFORM_BASE}
   repo:
     helm:
