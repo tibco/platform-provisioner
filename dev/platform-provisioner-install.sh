@@ -50,16 +50,35 @@ fi
 
 # The tekton version to install
 kubectl apply -f https://storage.googleapis.com/tekton-releases/pipeline/previous/${TEKTON_PIPELINE_RELEASE}/release.yaml
+if [[ $? -ne 0 ]]; then
+  echo "failed to install tekton pipeline"
+  exit 1
+fi
 
 if [[ ${PIPELINE_SKIP_TEKTON_DASHBOARD} != "true" ]]; then
   echo "#### installing tekton dashboard"
   kubectl apply --filename https://storage.googleapis.com/tekton-releases/dashboard/previous/${TEKTON_DASHBOARD_RELEASE}/release.yaml
+  if [[ $? -ne 0 ]]; then
+    echo "failed to install tekton dashboard"
+    exit 1
+  fi
 fi
 
 kubectl create namespace tekton-tasks
 
-echo "waiting for tekton to be ready..."
+echo "waiting for tekton controller to be ready..."
 _DEPLOYMENT_NAME="tekton-pipelines-controller"
+_TIMEOUT="120s"
+kubectl wait --for=condition=available -n tekton-pipelines "deployment/${_DEPLOYMENT_NAME}" --timeout=${_TIMEOUT}
+if [ $? -ne 0 ]; then
+  echo "Timeout: Deployment '${_DEPLOYMENT_NAME}' did not become available within ${_TIMEOUT}."
+  exit 1
+else
+  echo "Deployment '${_DEPLOYMENT_NAME}' is now ready."
+fi
+
+echo "waiting for tekton webhook to be ready..."
+_DEPLOYMENT_NAME="tekton-pipelines-webhook"
 _TIMEOUT="120s"
 kubectl wait --for=condition=available -n tekton-pipelines "deployment/${_DEPLOYMENT_NAME}" --timeout=${_TIMEOUT}
 if [ $? -ne 0 ]; then
@@ -79,20 +98,36 @@ export PIPLINE_NAMESPACE=${PIPLINE_NAMESPACE:-"tekton-tasks"}
 # install a sample pipeline with docker image that can run locally
 helm upgrade --install -n "${PIPLINE_NAMESPACE}" common-dependency common-dependency \
   --version ^1.0.0 --repo "${PLATFORM_PROVISIONER_PIPLINE_REPO}"
+if [[ $? -ne 0 ]]; then
+  echo "failed to install common-dependency"
+  exit 1
+fi
 
 helm upgrade --install -n "${PIPLINE_NAMESPACE}" generic-runner generic-runner \
   --version ^1.0.0 --repo "${PLATFORM_PROVISIONER_PIPLINE_REPO}" \
   --set serviceAccount=pipeline-cluster-admin \
   --set pipelineImage="${PIPELINE_DOCKER_IMAGE}"
+if [[ $? -ne 0 ]]; then
+  echo "failed to install generic-runner pipeline"
+  exit 1
+fi
 
 helm upgrade --install -n "${PIPLINE_NAMESPACE}" helm-install helm-install \
   --version ^1.0.0 --repo "${PLATFORM_PROVISIONER_PIPLINE_REPO}" \
   --set serviceAccount=pipeline-cluster-admin \
   --set pipelineImage="${PIPELINE_DOCKER_IMAGE}"
+if [[ $? -ne 0 ]]; then
+  echo "failed to install helm-install pipeline"
+  exit 1
+fi
 
 # install provisioner config
 helm upgrade --install -n "${PIPLINE_NAMESPACE}" provisioner-config-local provisioner-config-local \
   --version ^1.0.0 --repo "${PLATFORM_PROVISIONER_PIPLINE_REPO}"
+if [[ $? -ne 0 ]]; then
+  echo "failed to install provisioner-config-local"
+  exit 1
+fi
 
 # create secret for pulling images from ECR
 if [[ ${PIPELINE_SKIP_PROVISIONER_UI} == "true" ]]; then
@@ -108,6 +143,10 @@ kubectl create secret docker-registry -n "${PIPLINE_NAMESPACE}" ${_image_pull_se
   --docker-server="${PIPLINE_GUI_DOCKER_IMAGE_REPO}" \
   --docker-username="${PIPLINE_GUI_DOCKER_IMAGE_USERNAME}" \
   --docker-password="${PIPLINE_GUI_DOCKER_IMAGE_TOKEN}"
+if [[ $? -ne 0 ]]; then
+  echo "failed to create image pull secret"
+  exit 1
+fi
 
 # install provisioner web ui
 helm upgrade --install -n "${PIPLINE_NAMESPACE}" platform-provisioner-ui platform-provisioner-ui --repo "${PLATFORM_PROVISIONER_PIPLINE_REPO}" \
@@ -118,3 +157,7 @@ helm upgrade --install -n "${PIPLINE_NAMESPACE}" platform-provisioner-ui platfor
   --set guiConfig.onPremMode=true \
   --set guiConfig.pipelinesCleanUpEnabled=true \
   --set guiConfig.dataConfigMapName="provisioner-config-local-config"
+if [[ $? -ne 0 ]]; then
+  echo "failed to install platform-provisioner-ui"
+  exit 1
+fi
