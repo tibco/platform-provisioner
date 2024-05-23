@@ -46,7 +46,7 @@ options:
     type: string
     guiType: textarea
     lang: SH
-    reference: "tasks[3].script.content"
+    reference: "tasks[2].script.content"
     required: true
     description: "Script to register the cluster and deploy dp core infrastructure"
   - name: "GUI_PIPELINE_LOG_DEBUG"
@@ -91,22 +91,22 @@ recipe: |
         ignoreErrors: false
         fileName: script.sh
         content: |
+          # install dp-core-infrastructure
+
+    - condition: true
+      script:
+        ignoreErrors: false
+        fileName: script.sh
+        content: |
           # install ECR secret
           AWS_REGION=${AWS_REGION:-us-west-2}
-          
+  
           kubectl delete secret --namespace ${DP_NAMESPACE} ${DP_DATAPLANE_ID} 2>/dev/null
           kubectl create secret docker-registry ${DP_DATAPLANE_ID} \
           --docker-server=664529841144.dkr.ecr.${AWS_REGION}.amazonaws.com \
           --docker-username=AWS \
           --docker-password=${DP_ECR_TOKEN} \
           --namespace=${DP_NAMESPACE}
-    - condition: true
-      script:
-        ignoreErrors: false
-        fileName: script.sh
-        content: |
-          # install dp-core-infrastructure
-
     - condition: true
       script:
         ignoreErrors: false
@@ -123,3 +123,4 @@ recipe: |
           patch tp-tibtunnel
           patch provisioner-agent
           patch haproxy-dp-${DP_DATAPLANE_ID}
+          echo "done"
