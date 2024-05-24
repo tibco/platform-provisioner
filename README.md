@@ -22,7 +22,7 @@ Platform Provisioner by TIBCO® is a system that can provision a platform on any
 
 This repo provides some recipes to test the pipeline and cloud connection. It is located under [recipes](docs/recipes) folder.
 * tp-base: contains the base recipe to provision TIBCO Platform.
-* controplane: contains the recipe to provision TIBCO Cloud Control Plane.
+* controplane: contains the recipe to provision TIBCO® Control Plane.
 * k8s: contains the recipe to provision Kubernetes cluster.
 
 ## Run the Platform Provisioner in headless mode with Docker container

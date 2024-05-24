@@ -4,7 +4,7 @@
 # in the license file that is distributed with this file.
 #
 
-# Recipe for installing TIBCO Platform Control Plane on-premises
+# Recipe for installing TIBCO Control Plane on-premises
 apiVersion: v1
 kind: helm-install
 meta:

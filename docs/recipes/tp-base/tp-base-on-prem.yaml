@@ -4,8 +4,8 @@
 # in the license file that is distributed with this file.
 #
 
-# Recipe for installing TIBCO Platform Control Plane on-premises
-# This recipe provides a basic thrird-party tools that needed for TIBCO Platform Control Plane
+# Recipe for installing TIBCO Control Plane on-premises
+# This recipe provides a basic thrird-party tools that needed for TIBCO Control Plane
 # cert-manager
 # metrics-server
 # ingress-nginx
