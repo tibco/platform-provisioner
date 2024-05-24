@@ -1,41 +1,41 @@
 <!-- TOC -->
-* [Platform Provisioner](#platform-provisioner)
+* [Platform Provisioner by TIBCO®](#platform-provisioner-by-tibco)
   * [Get recipes from TIBCO GitHub](#get-recipes-from-tibco-github)
-  * [Run the platform-provisioner in headless mode with docker container](#run-the-platform-provisioner-in-headless-mode-with-docker-container)
+  * [Run the Platform Provisioner in headless mode with Docker container](#run-the-platform-provisioner-in-headless-mode-with-docker-container)
     * [Prerequisite](#prerequisite)
-    * [Run the platform-provisioner in headless mode](#run-the-platform-provisioner-in-headless-mode)
-  * [Run the platform-provisioner in headless mode with tekton pipeline](#run-the-platform-provisioner-in-headless-mode-with-tekton-pipeline)
+    * [Run the Platform Provisioner](#run-the-platform-provisioner)
+  * [Run the Platform Provisioner in headless mode with the Tekton pipeline](#run-the-platform-provisioner-in-headless-mode-with-the-tekton-pipeline)
     * [Prerequisite](#prerequisite-1)
-      * [Install tekton with tekton dashboard](#install-tekton-with-tekton-dashboard)
-    * [Run the platform-provisioner in headless mode](#run-the-platform-provisioner-in-headless-mode-1)
+      * [Install Tekton with Tekton dashboard](#install-tekton-with-tekton-dashboard)
+    * [Run the platform-provisioner in headless mode](#run-the-platform-provisioner-in-headless-mode)
   * [Docker image for Platform Provisioner](#docker-image-for-platform-provisioner)
 <!-- TOC -->
 
-# Platform Provisioner
+# Platform Provisioner by TIBCO®
 
-Platform Provisioner is a system that can provision a platform on any cloud provider (AWS, Azure) or on-prem. It consists of the following components:
-* A runtime Docker image: The docker image that contains all the supporting tools to run a pipeline with given recipe.
-* Pipelines: The script that can run inside the docker image to parse and run the recipe. Normally, the pipelines encapsulate as a helm chart.
+Platform Provisioner by TIBCO® is a system that can provision a platform on any cloud provider (AWS, Azure) or on-prem. It consists of the following components:
 * Recipes: contains all the information to provision a platform.
-* Platform Provisioner GUI: The GUI that is used to manage the recipes, pipelines, and runtime backend system. (docker for on-prem, tekton for Kubernetes)
+* Pipelines: The script that can run inside the Docker image to parse and run the recipe. Normally, the pipelines encapsulate as a helm chart.
+* A runtime Docker image: The Docker image that contains all the supporting tools to run a pipeline with given recipe.
 
 ## Get recipes from TIBCO GitHub
 
 This repo provides some recipes to test the pipeline and cloud connection. It is located under [recipes](docs/recipes) folder.
+* tp-base: contains the base recipe to provision TIBCO Platform.
+* controplane: contains the recipe to provision TIBCO Cloud Control Plane.
+* k8s: contains the recipe to provision Kubernetes cluster.
 
-For TIBCO Platform recipes, please see [TIBCO GitHub](https://github.com/tibco/cicinfra-devops/tree/main/recipes/cp-platform-dev/DataPlane/environments).
+## Run the Platform Provisioner in headless mode with Docker container
 
-## Run the platform-provisioner in headless mode with docker container
-
-The platform-provisioner can be run in headless mode with docker container. The docker container contains all the necessary tools to run the pipeline scripts.
-The `platform-provisioner.sh` script will create a docker container and run the pipeline scripts with the given recipe.
+The platform-provisioner can be run in headless mode with Docker container. The Docker container contains all the necessary tools to run the pipeline scripts.
+The `platform-provisioner.sh` script will create a Docker container and run the pipeline scripts with a given recipe.
 
 ### Prerequisite
 
 * Docker installed
 * Bash shell
 
-### Run the platform-provisioner in headless mode
+### Run the Platform Provisioner
 
 Go to the directory where you save the recipe and run the following command.
 We need to set `GITHUB_TOKEN` to access the pipeline private repo
@@ -46,14 +46,10 @@ export PIPELINE_CHART_REPO="${GITHUB_TOKEN}@raw.githubusercontent.com/tibco/plat
 /bin/bash -c "$(curl -fsSL https://${GITHUB_TOKEN}@raw.githubusercontent.com/tibco/platform-provisioner/main/dev/platform-provisioner.sh)"
 ```
 
-> [!Note]
-> By default, the script will download the latest docker image from dockerhub.
-> We have a pre-built docker image at [dockerhub](https://hub.docker.com/repository/docker/syantibco/platform-provisioner/general).
+## Run the Platform Provisioner in headless mode with the Tekton pipeline
 
-## Run the platform-provisioner in headless mode with tekton pipeline
-
-The platform-provisioner can be run in headless mode with tekton installed in the target Kubernetes cluster. 
-In this case, the recipe and pipeline will be scheduled by tekton and run in the target Kubernetes cluster.
+The platform-provisioner can be run in headless mode with Tekton installed in the target Kubernetes cluster. 
+In this case, the recipe and pipeline will be scheduled by Tekton and run in the target Kubernetes cluster.
 
 ### Prerequisite
 
@@ -61,7 +57,7 @@ In this case, the recipe and pipeline will be scheduled by tekton and run in the
 * Bash shell
 * yq version 4 installed
 
-#### Install tekton with tekton dashboard
+#### Install Tekton with Tekton dashboard
 ```bash
 export GITHUB_TOKEN=""
 export PIPELINE_SKIP_TEKTON_DASHBOARD=false
@@ -69,12 +65,12 @@ export PLATFORM_PROVISIONER_PIPLINE_REPO="https://${GITHUB_TOKEN}@raw.githubuser
 /bin/bash -c "$(curl -fsSL https://${GITHUB_TOKEN}@raw.githubusercontent.com/tibco/platform-provisioner/main/dev/platform-provisioner-install.sh)"
 ```
 
-After the installation, we can run the following command to port-forward the tekton dashboard to local machine.
+After the installation, you can run the following command to port-forward the Tekton dashboard to local machine.
 ```bash
 kubectl port-forward -n tekton-pipelines service/tekton-dashboard 8080:9097
 ```
 
-We can now access tekton provided dashboard: http://localhost:8080
+We can now access Tekton provided dashboard: http://localhost:8080
 
 ### Run the platform-provisioner in headless mode
 
@@ -89,31 +85,40 @@ You will be able to see the running pipelinerun on Tekton Dashboard by clicking 
 
 ## Docker image for Platform Provisioner
 
-We provide a Dockerfile to build the docker image. The docker image is used to run the pipeline. It contains the necessary tools to run the pipeline scripts.
+We provide a Dockerfile to build the Docker image. The Docker image is used to run the pipeline. It contains the necessary tools to run the pipeline scripts.
 
 <details>
-<summary>Steps to build docker image</summary>
-To build docker image locally, run the following command:
+<summary>Steps to build Docker image</summary>
+To build Docker image locally, run the following command:
 
 ```bash
 cd docker
 ./build.sh
 ```
 
-This will build the docker image called `platform-provisioner:latest`.
+This will build the Docker image called `platform-provisioner:latest`.
 
-To build multi-arch docker image and push to remote docker registry, run the following command:
+To build multi-arch Docker image and push to remote Docker registry, run the following command:
 
 ```bash
-export DOCKER_REGISTRY="<your docker registry repo>"
+export DOCKER_REGISTRY="<your Docker registry repo>"
 export PUSH_DOCKER_IMAGE=true
 cd docker
 ./build.sh
 ```
-This will build the docker image called `<your docker registry repo>/platform-provisioner:latest` and push to remote docker registry.
+This will build the Docker image called `<your Docker registry repo>/platform-provisioner:latest` and push to remote Docker registry.
 
 </details>
 
 > [!Note]
 > For other options, please see [docker/build.sh](docker/build.sh).
 
+---
+Copyright 2024 Cloud Software Group, Inc.
+
+License. This project is Licensed under the Apache License, Version 2.0 (the "License").
+You may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and limitations under the License.
