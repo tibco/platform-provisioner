@@ -1,19 +1,34 @@
-#
-# Copyright © 2024. Cloud Software Group, Inc.
-# This file is subject to the license terms contained
-# in the license file that is distributed with this file.
-#
-
-# Recipe for installing TIBCO Control Plane on-premises
 apiVersion: v1
 kind: helm-install
 meta:
+  guiEnv:
+    note: "deploy-cp-on-prem"
+    # github
+    GUI_GITHUB_TOKEN: ""
+    GUI_CP_ADMIN_EMAIL: "cp-test@tibco.com"
+    # env
+    GUI_CP_INSTANCE_ID: cp1
+    GUI_CP_ENV: vagrant
+    # container registry
+    GUI_CP_CONTAINER_REGISTRY: reldocker.tibco.com
+    GUI_CP_CONTAINER_REGISTRY_USERNAME: ""
+    GUI_CP_CONTAINER_REGISTRY_PASSWORD: ""
+    # TLS
+    GUI_TP_TLS_CERT: ""
+    GUI_TP_TLS_KEY: ""
+    # version
+    GUI_CP_PLATFORM_BOOTSTRAP_VERSION: 1.2.23
+    GUI_CP_PLATFORM_BASE_VERSION: 1.2.136
+    # storage
+    GUI_CP_STORAGE_CLASS: standard
+    GUI_CP_STORAGE_CREATE_PV: false
+    GUI_CP_STORAGE_PV_NAME: "" # control-plane-pv the name of PV for kind
   globalEnvVariable:
     REPLACE_RECIPE: true
     PIPELINE_LOG_DEBUG: false
     PIPELINE_CHECK_DOCKER_STATUS: false
     # GitHub credentials
-    GITHUB_TOKEN: "" # You need to set GITHUB_TOKEN for local use. For pipeline, it will be set by pipeline
+    GITHUB_TOKEN: "${GUI_GITHUB_TOKEN}" # You need to set GITHUB_TOKEN for local use. For pipeline, it will be set by pipeline
     GITHUB_USER_NAME: ${GUI_GITHUB_USER_NAME:-"cp-test"}
     CP_CHART_REPO: https://${GITHUB_TOKEN}@raw.githubusercontent.com/tibco/tp-helm-charts/gh-pages
     # env
@@ -30,9 +45,9 @@ meta:
     CP_STORAGE_CLASS: ${GUI_CP_STORAGE_CLASS:-"standard"} # standard, gp2, hostpath, efs-sc
     CP_STORAGE_PV_NAME: "" # control-plane-pv the name of PV for kind, works with CP_STORAGE_CREATE_PV flag
     # container registry
-    CP_CONTAINER_REGISTRY: "reldocker.tibco.com"
-    CP_CONTAINER_REGISTRY_USERNAME: ""
-    CP_CONTAINER_REGISTRY_PASSWORD: ""
+    CP_CONTAINER_REGISTRY: ${GUI_CP_CONTAINER_REGISTRY:-"reldocker.tibco.com"}
+    CP_CONTAINER_REGISTRY_USERNAME: "${GUI_CP_CONTAINER_REGISTRY_USERNAME}"
+    CP_CONTAINER_REGISTRY_PASSWORD: "${GUI_CP_CONTAINER_REGISTRY_PASSWORD}"
     # node
     CP_NODE_CIDR: 10.180.0.0/16
     CP_POD_CIDR: 10.180.0.0/16
@@ -59,8 +74,8 @@ meta:
     CP_SKIP_BOOTSTRAP_INGRESS: false
     CP_ALB_CERTIFICATE_ARN: ""
     CP_NLB_CERTIFICATE_ARN: ""
-    TP_TLS_CERT: ""
-    TP_TLS_KEY: ""
+    TP_TLS_CERT: ${GUI_TP_TLS_CERT}
+    TP_TLS_KEY: ${GUI_TP_TLS_KEY}
     # CP version
     CP_PLATFORM_BOOTSTRAP_VERSION: ${GUI_CP_PLATFORM_BOOTSTRAP_VERSION:-1.2.23} # 1.2 GA release. use ^1.0.0 for latest
     CP_PLATFORM_BASE_VERSION: ${CP_PLATFORM_BASE_VERSION:-1.2.136} # 1.2 GA release. use ^1.0.0 for latest
@@ -355,14 +370,12 @@ helmCharts:
         external:
           ingress:
             ingressClassName: ${CP_INGRESS_CLASSNAME}
-            certificateArn: ${CP_ALB_CERTIFICATE_ARN}
             annotations:
               kubernetes.io/ingress.class: ${CP_INGRESS_CLASSNAME} # used for external DNS to create the record
           aws:
             tunnelService:
               annotations: 
                 kubernetes.io/ingress.class: alb # used for external DNS to create the record
-              certificateArn: ${CP_NLB_CERTIFICATE_ARN}
               loadBalancerClass: service.k8s.aws/nlb
           clusterInfo:
             nodeCIDR: ${CP_NODE_CIDR}
