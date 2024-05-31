@@ -38,7 +38,6 @@ meta:
     # flow control
     TP_INSTALL_K8S: true # change to true to install k8s
     TP_INSTALL_EFS: true # change to true to install efs
-    TP_INSTALL_CALICO: ${GUI_TP_INSTALL_CALICO:-false} # change to true to install calico
     TP_INSTALL_STORAGE: true # change to false to skip storage installation
     TP_SCRIPT_BRANCH: main
     TP_SCRIPT_NAME_SH_EKS: create-eks.sh # the script that DP will run
@@ -230,71 +229,6 @@ helmCharts:
     timeout: 1h
     createNamespace: true
     extra: "--values ${TP_INSTALL_EFS_VALUES_FILE}"
-- name: dp-config-aws
-  version: "1.0.25"
-  condition: ${TP_INSTALL_CALICO}
-  repo:
-    helm:
-      url: ${TP_CHART_REPO}
-  values:
-    keepPrevious: true
-    content: |
-      ingress-nginx:
-        enabled: false
-      httpIngress:
-        enabled: false
-      service:
-        enabled: false
-      storageClass:
-        ebs:
-          enabled: false
-        efs:
-          enabled: false
-      tigera-operator:
-        enabled: true
-        installation:
-          enabled: true
-          kubernetesProvider: EKS
-          cni:
-            type: AmazonVPC
-          calicoNetwork:
-            bgp: Disabled
-  hooks:
-    preDeploy:
-      ignoreErrors: false
-      base64Encoded: false
-      skip: false
-      content: |
-        kubectl set env daemonset aws-node -n kube-system POD_SECURITY_GROUP_ENFORCING_MODE=standard
-        sleep 90 ## wait for aws-node daemonset pods statuses to be running
-    postDeploy:
-      ignoreErrors: false
-      base64Encoded: false
-      skip: false
-      content: |
-        cat >append.yaml<<EOF
-        - apiGroups:
-            - ""
-          resources:
-            - pods
-          verbs:
-            - patch
-        EOF
-        kubectl apply -f <(cat <(kubectl get clusterrole aws-node -o yaml) append.yaml)
-        sleep 60 ## wait for cluster role to be updated
-        kubectl set env daemonset aws-node -n kube-system ANNOTATE_POD_IP=true
-        sleep 90 ## wait for aws-node daemonset pods statuses to be running
-        kubectl rollout restart deployment calico-kube-controllers -n calico-system
-        sleep 60 ## wait for calico-kube-controller pod status to be running
-  cluster:
-    names:
-      - ${TP_CLUSTER_NAME}
-  releaseName: dp-config-aws-calico
-  namespace: tigera-operator
-  flags:
-    wait: true
-    timeout: 1h
-    createNamespace: true
 - name: postgresql
   version: 11.9.13 # 14.3.3 use postgresql 16.2.0, 11.9.13 use postgresql 14.5.0 PCP-4922
   namespace: tibco-ext
