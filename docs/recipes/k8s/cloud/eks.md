@@ -37,6 +37,7 @@ Environment variables that need to set in the recipe:
 meta:
   globalEnvVariable:
     GITHUB_TOKEN: "" # You need to set GITHUB_TOKEN for CP dev in private repo
+    PIPELINE_AWS_MANAGED_ACCOUNT_ROLE: "" #AWS Role which needs to be assumed
     TP_CLUSTER_NAME: ""
 ```
 
@@ -61,17 +62,19 @@ Environment variables that need to set in the recipe:
 meta:
   globalEnvVariable:
     GITHUB_TOKEN: "" # You need to set GITHUB_TOKEN for CP dev in private repo
+    PIPELINE_AWS_MANAGED_ACCOUNT_ROLE: "" #AWS Role which needs to be assumed
     # container registry
-    CP_CONTAINER_REGISTRY: "" # use jFrog for CP production deployment
+    CP_CONTAINER_REGISTRY: "" # use jFrog for CP production deployment 
     CP_CONTAINER_REGISTRY_USERNAME: ""
     CP_CONTAINER_REGISTRY_PASSWORD: ""
 
     CP_CLUSTER_NAME: ""
     CP_PROVIDER: "aws"
     CP_DNS_DOMAIN: ""
-    CP_STORAGE_CLASS: ""
+    CP_STORAGE_CLASS: "" 
 
-    CP_INGRESS_CLASSNAME: "alb"
+    CP_INGRESS_CLASSNAME: "nginx" 
+    CP_SKIP_BOOTSTRAP_INGRESS: true #This bootstrap ingress is needed in case of onprem minikube etc, needs to be skipped for aws
     CP_ALB_CERTIFICATE_ARN: ""
     CP_NLB_CERTIFICATE_ARN: ""
 ```
