@@ -14,6 +14,7 @@
 #   TP_CLUSTER_VPC_CIDR: The VPC CIDR
 #   TP_CLUSTER_INSTANCE_TYPE: The instance type
 #   TP_CLUSTER_DESIRED_CAPACITY: The desired capacity
+#   TP_CLUSTER_ENABLE_NETWORK_POLICY: Use AWS CNI for network policy
 # Arguments:
 #   None
 # Returns:
@@ -30,6 +31,7 @@ export TP_CLUSTER_REGION=${TP_CLUSTER_REGION:-"us-west-2"}
 export TP_CLUSTER_VPC_CIDR=${TP_CLUSTER_VPC_CIDR:-"10.180.0.0/16"}
 export TP_CLUSTER_INSTANCE_TYPE=${TP_CLUSTER_INSTANCE_TYPE:-"r5ad.xlarge"}
 export TP_CLUSTER_DESIRED_CAPACITY=${TP_CLUSTER_DESIRED_CAPACITY:-"2"}
+export TP_CLUSTER_ENABLE_NETWORK_POLICY=${TP_CLUSTER_ENABLE_NETWORK_POLICY:-"true"}
 
 cat >eksctl-config.yaml<<EOF
 apiVersion: eksctl.io/v1alpha5
@@ -90,6 +92,8 @@ addons:
   - name: vpc-cni # no version is specified so it deploys the default version
     attachPolicyARNs:
       - arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
+    configurationValues: |-
+      enableNetworkPolicy: "${TP_CLUSTER_ENABLE_NETWORK_POLICY}"
   - name: kube-proxy
     version: latest
   - name: coredns
