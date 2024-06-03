@@ -8,34 +8,34 @@
 apiVersion: v1
 kind: helm-install
 meta:
-  guiEnv:
-    GUI_TP_ENV: ""
   globalEnvVariable:
     # piepline env
     REPLACE_RECIPE: true
     PIPELINE_LOG_DEBUG: false
     PIPELINE_CHECK_DOCKER_STATUS: false
     # github
-    TP_GITHUB_TOKEN: ""
-    TP_CHART_REPO: https://${TP_GITHUB_TOKEN}@raw.githubusercontent.com/tibco/tp-helm-charts/gh-pages
-    # Azure env
-    TP_RESOURCE_GROUP: "" # Azure resource group name
-    AZURE_RESOURCE_GROUP: ${TP_RESOURCE_GROUP} # provisioner pipeline assume role needed
-    TP_AUTHORIZED_IP: "" # your ip x.x.x.x/32
-    # basic cluster env
+    GITHUB_TOKEN: ${GUI_GITHUB_TOKEN}
+    TP_CHART_REPO: https://${GITHUB_TOKEN}@raw.githubusercontent.com/tibco/tp-helm-charts/gh-pages
+    # cluster
     TP_CLUSTER_NAME: ${GUI_TP_CLUSTER_NAME}
     CLUSTER_NAME: ${TP_CLUSTER_NAME} # pipeline aks internal variable
     TP_CLUSTER_VERSION: ${GUI_TP_CLUSTER_VERSION:-1.29}
     TP_AZURE_REGION: ${GUI_TP_AZURE_REGION:-"westus2"} # the default region for the azure account
+    # Azure env
+    TP_RESOURCE_GROUP: "" # Azure resource group name
+    AZURE_RESOURCE_GROUP: ${TP_RESOURCE_GROUP} # provisioner pipeline assume role needed
+    TP_AUTHORIZED_IP: "" # your ip x.x.x.x/32
     # domain
     TP_TOP_LEVEL_DOMAIN: azure.dataplanes.pro # 🚧 (TIBCO Account value)
-    TP_DOMAIN: ${TP_ENV}.${TP_SANDBOX}.${TP_TOP_LEVEL_DOMAIN} # 🚧 (TIBCO Account value)
+    TP_DOMAIN: ${GUI_TP_DOMAIN} # the star domain for the main ingress <cp/dp-env>.${SANDBOX}.azure.dataplanes.pro
     # ingress
     TP_MAIN_INGRESS_CLASS_NAME: "azure-application-gateway" # name of azure application gateway ingress controller
     TP_DNS_RESOURCE_GROUP: cic-dns # replace with name of existing dns resource group 🚧 (TIBCO Account value)
     TP_INGRESS_CLASS: ${GUI_TP_INGRESS_CLASS:-"nginx"} # name of main ingress class used by capabilities
     TP_INGRESS_RELEASE_NAME: dp-config-aks-ingress
-    # storage class env
+    # network policy
+    TP_CLUSTER_ENABLE_NETWORK_POLICY: ${GUI_TP_CLUSTER_ENABLE_NETWORK_POLICY:-false}
+    # storage
     TP_DISK_ENABLED: "true" # name of azure disk storage class
     TP_DISK_STORAGE_CLASS: "azure-disk-sc" # name of azure disk storage class
     TP_FILE_ENABLED: "true" # to enable azure files storage class
@@ -399,6 +399,7 @@ helmCharts:
     createNamespace: true
 - name: kube-prometheus-stack
   version: "54.2.1"
+  condition: ${TP_INSTALL_O11Y}
   repo:
     helm:
       url: https://prometheus-community.github.io/helm-charts
@@ -621,7 +622,7 @@ helmCharts:
                 - set(attributes["pod_name"], resource.attributes["k8s.pod.name"])
                 - set(attributes["pod_namespace"], resource.attributes["k8s.namespace.name"])
                 - set(attributes["app_id"], resource.attributes["app_id"])
-                - set(attributes["app_id"], resource.attributes["capability_instance_id"]) where IsMatch(resource.attributes["app_type"], "msg-*")
+                - set(attributes["app_id"], resource.attributes["capability-instance-id"]) where IsMatch(resource.attributes["app_type"], "msg-*")
                 - set(attributes["app_type"], resource.attributes["app_type"])
                 - set(attributes["dataplane_id"], resource.attributes["dataplane_id"])
                 - set(attributes["workload_type"], resource.attributes["workload_type"])
