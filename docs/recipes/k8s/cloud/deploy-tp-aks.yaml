@@ -22,15 +22,16 @@ meta:
     TP_CLUSTER_VERSION: ${GUI_TP_CLUSTER_VERSION:-1.29}
     TP_AZURE_REGION: ${GUI_TP_AZURE_REGION:-"westus2"} # the default region for the azure account
     # Azure env
-    TP_RESOURCE_GROUP: "" # Azure resource group name
+    TP_RESOURCE_GROUP: ${GUI_TP_RESOURCE_GROUP} # Azure resource group name
     AZURE_RESOURCE_GROUP: ${TP_RESOURCE_GROUP} # provisioner pipeline assume role needed
     TP_AUTHORIZED_IP: "" # your ip x.x.x.x/32
     # domain
-    TP_TOP_LEVEL_DOMAIN: azure.dataplanes.pro # 🚧 (TIBCO Account value)
-    TP_DOMAIN: ${GUI_TP_DOMAIN} # the star domain for the main ingress <cp/dp-env>.${SANDBOX}.azure.dataplanes.pro
+    TP_TOP_LEVEL_DOMAIN: ${GUI_TP_TOP_LEVEL_DOMAIN} # the top level domain for the main ingress
+    TP_SANDBOX: ${GUI_TP_SANDBOX} # the sandbox for the main ingress
+    TP_DOMAIN: ${TP_SANDBOX}.${TP_TOP_LEVEL_DOMAIN} # the actual domain for the TIBCO platform. Sample format: <cp/dp-env>.${SANDBOX}.${TP_TOP_LEVEL_DOMAIN}
     # ingress
     TP_MAIN_INGRESS_CLASS_NAME: "azure-application-gateway" # name of azure application gateway ingress controller
-    TP_DNS_RESOURCE_GROUP: cic-dns # replace with name of existing dns resource group 🚧 (TIBCO Account value)
+    TP_DNS_RESOURCE_GROUP: ${GUI_TP_DNS_RESOURCE_GROUP}
     TP_INGRESS_CLASS: ${GUI_TP_INGRESS_CLASS:-"nginx"} # name of main ingress class used by capabilities
     TP_INGRESS_RELEASE_NAME: dp-config-aks-ingress
     # network policy
@@ -41,8 +42,8 @@ meta:
     TP_FILE_ENABLED: "true" # to enable azure files storage class
     TP_FILE_STORAGE_CLASS: "azure-files-sc" # name of azure files storage class
     ## please note: to support nfs protocol the storage account tier should be Premium with kind FileStorage in supported regions: https://learn.microsoft.com/en-us/troubleshoot/azure/azure-storage/files-troubleshoot-linux-nfs?tabs=RHEL#unable-to-create-an-nfs-share
-    TP_STORAGE_ACCOUNT_NAME: "" # replace with name of existing storage account to be used for azure file shares 🚧 (TIBCO Account value)
-    TP_STORAGE_ACCOUNT_RESOURCE_GROUP: "" # replace with name of storage account resource group 🚧 (TIBCO Account value)
+    TP_STORAGE_ACCOUNT_NAME: "" # replace with name of existing storage account to be used for azure file shares
+    TP_STORAGE_ACCOUNT_RESOURCE_GROUP: "" # replace with name of storage account resource group
     # o11y
     TP_ES_RELEASE_NAME: "dp-config-es" # name of dp-config-es release name
     # flow control
@@ -51,6 +52,7 @@ meta:
     TP_INSTALL_CHART_VALUES_FILE: "/workspace/resources/global-values.yaml"
     TP_SCRIPT_BRANCH: main
     TP_INSTALL_POSTGRES: ${GUI_TP_INSTALL_POSTGRES:-true}
+    TP_INSTALL_O11Y: ${GUI_TP_INSTALL_O11Y:-false}
     # Do not change, variables to configure nginx/kong related resources based on ingressclass passed
     TP_ENABLE_NGINX: $([[ "$TP_INGRESS_CLASS" == "nginx" ]] && echo "true" || echo "false")
     TP_ENABLE_KONG: $([[ "$TP_INGRESS_CLASS" == "kong" ]] && echo "true" || echo "false")
