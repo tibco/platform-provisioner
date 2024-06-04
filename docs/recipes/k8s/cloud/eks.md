@@ -39,6 +39,7 @@ meta:
     GITHUB_TOKEN: "" # You need to set GITHUB_TOKEN for CP dev in private repo
     PIPELINE_AWS_MANAGED_ACCOUNT_ROLE: "" #AWS Role which needs to be assumed
     TP_CLUSTER_NAME: ""
+    TP_DOMAIN: ""
 ```
 
 ## Deploy TIBCO Control Plane on EKS
