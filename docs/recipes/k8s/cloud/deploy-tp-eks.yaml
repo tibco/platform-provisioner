@@ -28,6 +28,8 @@ meta:
     TP_INGRESS_CLASS: ${GUI_TP_INGRESS_CLASS:-"nginx"}
     TP_INGRESS_RELEASE_NAME: dp-config-aws-ingress
     TP_ES_RELEASE_NAME: dp-config-es
+    # network policy
+    TP_CLUSTER_ENABLE_NETWORK_POLICY: ${GUI_TP_CLUSTER_ENABLE_NETWORK_POLICY:-true}
     # storage
     TP_EBS_ENABLED: true
     TP_EFS_ENABLED: true
