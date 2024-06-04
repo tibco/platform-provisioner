@@ -24,14 +24,14 @@ meta:
     # Azure env
     TP_RESOURCE_GROUP: ${GUI_TP_RESOURCE_GROUP} # Azure resource group name
     AZURE_RESOURCE_GROUP: ${TP_RESOURCE_GROUP} # provisioner pipeline assume role needed
-    TP_AUTHORIZED_IP: "" # your ip x.x.x.x/32
+    TP_AUTHORIZED_IP: ${GUI_TP_AUTHORIZED_IP} # your ip x.x.x.x/32
     # domain
     TP_TOP_LEVEL_DOMAIN: ${GUI_TP_TOP_LEVEL_DOMAIN} # the top level domain for the main ingress
     TP_SANDBOX: ${GUI_TP_SANDBOX} # the sandbox for the main ingress
     TP_DOMAIN: ${TP_SANDBOX}.${TP_TOP_LEVEL_DOMAIN} # the actual domain for the TIBCO platform. Sample format: <cp/dp-env>.${SANDBOX}.${TP_TOP_LEVEL_DOMAIN}
     # ingress
     TP_MAIN_INGRESS_CLASS_NAME: "azure-application-gateway" # name of azure application gateway ingress controller
-    TP_DNS_RESOURCE_GROUP: ${GUI_TP_DNS_RESOURCE_GROUP}
+    TP_DNS_RESOURCE_GROUP: ${GUI_TP_DNS_RESOURCE_GROUP} # must provide
     TP_INGRESS_CLASS: ${GUI_TP_INGRESS_CLASS:-"nginx"} # name of main ingress class used by capabilities
     TP_INGRESS_RELEASE_NAME: dp-config-aks-ingress
     # network policy
