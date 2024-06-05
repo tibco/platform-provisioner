@@ -42,7 +42,7 @@ set +x
 
 # pipeline image
 [[ -z "${PIPELINE_DOCKER_IMAGE}" ]] && export PIPELINE_DOCKER_IMAGE=${PIPELINE_DOCKER_IMAGE:-"syantibco/platform-provisioner:latest"}
-[[ -z "${PIPELINE_CHART_REPO}" ]] && export PIPELINE_CHART_REPO="TIBCOSoftware.github.io/platform-provisioner/"
+[[ -z "${PIPELINE_CHART_REPO}" ]] && export PIPELINE_CHART_REPO="tibcosoftware.github.io/platform-provisioner"
 
 # we need to set REGION, otherwise the INPUT will not be loaded
 [[ -z "${ACCOUNT}" ]] && export ACCOUNT="on-prem"

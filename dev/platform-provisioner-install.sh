@@ -16,12 +16,16 @@
 #   PIPELINE_DOCKER_IMAGE: the docker image for the pipeline
 #   PIPELINE_SKIP_PROVISIONER_UI: true or other string if true, will skip installing platform-provisioner GUI
 #   PIPELINE_SKIP_TEKTON_DASHBOARD: true or other string if true, will skip installing tekton dashboard
+#   GITHUB_TOKEN: the token to access github that all pipeline can share
 # Arguments:
 #   None
 # Returns:
 #   0 if thing was deleted, non-zero on error
 # Notes:
-#   None
+#   By default without any input, it will install tekton, common-dependency, generic-runner, helm-install pipelines
+#   If we want to add tekton official dashboard, we can set PIPELINE_SKIP_TEKTON_DASHBOARD to false
+#   If we want to add platform-provisioner GUI, we need to set PIPLINE_GUI_DOCKER_IMAGE_REPO, PIPLINE_GUI_DOCKER_IMAGE_USERNAME, PIPLINE_GUI_DOCKER_IMAGE_TOKEN
+#      and set PIPELINE_SKIP_PROVISIONER_UI to false to install provisioner GUI
 # Samples:
 #    export PIPLINE_GUI_DOCKER_IMAGE_TOKEN="your-ecr-token"
 #    export PIPLINE_GUI_DOCKER_IMAGE_REPO="your-ecr-repo"
@@ -66,27 +70,22 @@ fi
 
 kubectl create namespace tekton-tasks
 
-echo "waiting for tekton controller to be ready..."
-_DEPLOYMENT_NAME="tekton-pipelines-controller"
-_TIMEOUT="120s"
-kubectl wait --for=condition=available -n tekton-pipelines "deployment/${_DEPLOYMENT_NAME}" --timeout=${_TIMEOUT}
-if [ $? -ne 0 ]; then
-  echo "Timeout: Deployment '${_DEPLOYMENT_NAME}' did not become available within ${_TIMEOUT}."
-  exit 1
-else
-  echo "Deployment '${_DEPLOYMENT_NAME}' is now ready."
-fi
+function k8s-waitfor-deployment() {
+  _deployment_namespace=$1
+  _deployment_name=$2
+  _timeout=$3
+  echo "waiting for ${_deployment_name} in namespace: ${_deployment_namespace} to be ready..."
+  kubectl wait --for=condition=available -n ${_deployment_namespace} "deployment/${_deployment_name}" --timeout=${_timeout}
+  if [ $? -ne 0 ]; then
+    echo "Timeout: Deployment '${_deployment_name}' did not become available within ${_timeout}."
+    return 1
+  else
+    echo "Deployment '${_deployment_name}' is now ready."
+  fi
+}
 
-echo "waiting for tekton webhook to be ready..."
-_DEPLOYMENT_NAME="tekton-pipelines-webhook"
-_TIMEOUT="120s"
-kubectl wait --for=condition=available -n tekton-pipelines "deployment/${_DEPLOYMENT_NAME}" --timeout=${_TIMEOUT}
-if [ $? -ne 0 ]; then
-  echo "Timeout: Deployment '${_DEPLOYMENT_NAME}' did not become available within ${_TIMEOUT}."
-  exit 1
-else
-  echo "Deployment '${_DEPLOYMENT_NAME}' is now ready."
-fi
+k8s-waitfor-deployment "tekton-pipelines" "tekton-pipelines-controller" "120s"
+k8s-waitfor-deployment "tekton-pipelines" "tekton-pipelines-webhook" "120s"
 
 # create service account for this pipeline
 kubectl create -n tekton-tasks serviceaccount pipeline-cluster-admin
@@ -122,18 +121,18 @@ if [[ $? -ne 0 ]]; then
   exit 1
 fi
 
+# create secret for pulling images from ECR
+if [[ ${PIPELINE_SKIP_PROVISIONER_UI} == "true" ]]; then
+  echo "### skip installing platform-provisioner GUI"
+  exit 0
+fi
+
 # install provisioner config
 helm upgrade --install -n "${PIPLINE_NAMESPACE}" provisioner-config-local provisioner-config-local \
   --version ^1.0.0 --repo "${PLATFORM_PROVISIONER_PIPLINE_REPO}"
 if [[ $? -ne 0 ]]; then
   echo "failed to install provisioner-config-local"
   exit 1
-fi
-
-# create secret for pulling images from ECR
-if [[ ${PIPELINE_SKIP_PROVISIONER_UI} == "true" ]]; then
-  echo "### skip installing platform-provisioner GUI"
-  exit 0
 fi
 
 _image_pull_secret_name="platform-provisioner-ui-image-pull"
@@ -162,3 +161,5 @@ if [[ $? -ne 0 ]]; then
   echo "failed to install platform-provisioner-ui"
   exit 1
 fi
+
+k8s-waitfor-deployment "${PIPLINE_NAMESPACE}" "platform-provisioner-ui" "300s"
