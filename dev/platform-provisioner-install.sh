@@ -97,7 +97,8 @@ export PIPLINE_NAMESPACE=${PIPLINE_NAMESPACE:-"tekton-tasks"}
 
 # install a sample pipeline with docker image that can run locally
 helm upgrade --install -n "${PIPLINE_NAMESPACE}" common-dependency common-dependency \
-  --version ^1.0.0 --repo "${PLATFORM_PROVISIONER_PIPLINE_REPO}"
+  --version ^1.0.0 --repo "${PLATFORM_PROVISIONER_PIPLINE_REPO}" \
+  --set githubToken="${GITHUB_TOKEN}"
 if [[ $? -ne 0 ]]; then
   echo "failed to install common-dependency"
   exit 1
