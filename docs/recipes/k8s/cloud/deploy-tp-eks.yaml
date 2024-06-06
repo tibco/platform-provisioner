@@ -38,9 +38,9 @@ meta:
     TP_INSTALL_RESOURCE_FOLDER: "/workspace/resources"
     TP_INSTALL_EFS_VALUES_FILE: "${TP_INSTALL_RESOURCE_FOLDER}/efs_values.yaml"
     # flow control
-    TP_INSTALL_K8S: true # change to true to install k8s
-    TP_INSTALL_EFS: true # change to true to install efs
-    TP_INSTALL_STORAGE: true # change to false to skip storage installation
+    TP_INSTALL_K8S: ${GUI_TP_INSTALL_K8S:-true} # change to true to install k8s
+    TP_INSTALL_EFS: ${GUI_TP_INSTALL_EFS:-true} # change to true to install efs
+    TP_INSTALL_STORAGE: ${GUI_TP_INSTALL_STORAGE:-true} # change to false to skip storage installation
     TP_SCRIPT_BRANCH: main
     TP_SCRIPT_NAME_SH_EKS: create-eks.sh # the script that DP will run
     TP_SCRIPT_NAME_SH_EFS: create-efs.sh # the script that DP will run

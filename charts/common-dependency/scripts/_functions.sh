@@ -334,7 +334,7 @@ function aks-pp-assume-role() {
 #         AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN will be cleaned
 #     2.2 If we set PIPELINE_USE_LOCAL_CREDS is set to true; we can use AWS_PROFILE (will jump to PIPELINE_AWS_MANAGED_ACCOUNT_ROLE role to get token)
 #         or AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN to assume to target account. (local use case) (will NOT jump to PIPELINE_AWS_MANAGED_ACCOUNT_ROLE role. We will use the token as it is to setup kubeconfig file)
-#   3. Azure Pipeline use case: The pipline pod will only works in AWS account 664529841144; so that it can use AzureFederation role to assume to Azure account. You need to set PIPELINE_USE_LOCAL_CREDS not true to use this feature
+#   3. Azure Pipeline use case: You need to set PIPELINE_USE_LOCAL_CREDS not true to use this feature
 #   4. Azure Local use case: Only works with PIPELINE_USE_LOCAL_CREDS is set to true. Except admin; no one can use AzureFederation role to assume to Azure account
 #   5. On-prem use case:
 # Samples:
