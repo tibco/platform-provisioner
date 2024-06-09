@@ -30,9 +30,9 @@ meta:
     CP_STORAGE_CLASS: ${GUI_CP_STORAGE_CLASS:-"standard"} # standard, gp2, hostpath, efs-sc
     CP_STORAGE_PV_NAME: "" # control-plane-pv the name of PV for kind, works with CP_STORAGE_CREATE_PV flag
     # container registry
-    CP_CONTAINER_REGISTRY: "reldocker.tibco.com"
-    CP_CONTAINER_REGISTRY_USERNAME: ""
-    CP_CONTAINER_REGISTRY_PASSWORD: ""
+    CP_CONTAINER_REGISTRY: ${GUI_CP_CONTAINER_REGISTRY:-"csgprduswrepoedge.jfrog.io"}
+    CP_CONTAINER_REGISTRY_USERNAME: "${GUI_CP_CONTAINER_REGISTRY_USERNAME}"
+    CP_CONTAINER_REGISTRY_PASSWORD: "${GUI_CP_CONTAINER_REGISTRY_PASSWORD}"
     # node
     CP_NODE_CIDR: 10.180.0.0/16
     CP_POD_CIDR: 10.180.0.0/16
@@ -546,7 +546,7 @@ helmCharts:
           db_username: ${CP_DB_USER_NAME}
           emailServer:
             ses:
-              arn: arn:aws:ses:us-west-2:664529841144:identity/tcie.pro
+              arn: ""
             smtp:
               password: ""
               port: "1025"
