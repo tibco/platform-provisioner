@@ -70,7 +70,7 @@ meta:
     CP_CREATE_NAMESPACE: true
     CP_INSTALL_MAILDEV: true
     CP_INSTALL_MAILDEV_INGRESS: ${GUI_CP_INSTALL_MAILDEV_INGRESS:-true}
-    CP_STORAGE_CREATE_PV: false # create PV for control-plane-pv for Kind and MicroK8s use case
+    CP_STORAGE_CREATE_PV: ${GUI_CP_STORAGE_CREATE_PV:-false} # create PV for control-plane-pv for Kind, MicroK8s and Azure use case
     CP_INSTALL_PLATFORM_BOOTSTRAP: true
     CP_INSTALL_PLATFORM_BASE: true
   tools:
