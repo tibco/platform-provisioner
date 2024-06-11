@@ -24,7 +24,6 @@ meta:
     TP_DOMAIN: ${GUI_TP_DOMAIN} # the star domain for the main ingress <cp/dp-env>.${SANDBOX}.dataplanes.pro
     TP_CLUSTER_VPC_CIDR: "10.180.0.0/16"
     # ingress
-    TP_MAIN_INGRESS_CONTROLLER: alb # traefik or traefik, alb for AWS ingress controller
     TP_INGRESS_CLASS: ${GUI_TP_INGRESS_CLASS:-"nginx"}
     TP_INGRESS_RELEASE_NAME: dp-config-aws-ingress
     TP_INGRESS_NAMESPACE: ingress-system
@@ -137,7 +136,6 @@ helmCharts:
         name: external-dns 
       extraArgs:
         # only register DNS for these ingress classes
-        - "--ingress-class=${TP_MAIN_INGRESS_CONTROLLER}"
         - "--ingress-class=${TP_INGRESS_CLASS}"
   cluster:
     names:
