@@ -240,6 +240,17 @@ helmCharts:
       base64Encoded: false
       skip: ${TP_SKIP_GENERATE_CLUSTER_ISSUER}
       content: |
+        # create a namespace for the main ingress
+        kubectl apply -f - <<EOF
+        apiVersion: v1
+        kind: Namespace
+        metadata:
+          name: ${TP_INGRESS_NAMESPACE}
+          labels:
+            networking.platform.tibco.com/non-cp-ns: enable
+        EOF
+        
+        # create a certificate for the main ingress
         kubectl apply -f - << EOF
         apiVersion: cert-manager.io/v1
         kind: Certificate
