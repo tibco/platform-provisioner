@@ -28,6 +28,7 @@ meta:
     TP_INGRESS_RELEASE_NAME: dp-config-aws-ingress
     TP_INGRESS_NAMESPACE: ingress-system
     TP_ES_RELEASE_NAME: dp-config-es
+    TP_CERTIFICATE_CLUSTER_ISSUER: ${GUI_TP_CERTIFICATE_CLUSTER_ISSUER:-"tp-prod"} # the cluster issuer for tp-certificate
     # network policy
     TP_CLUSTER_ENABLE_NETWORK_POLICY: ${GUI_TP_CLUSTER_ENABLE_NETWORK_POLICY:-true}
     # storage
@@ -111,13 +112,13 @@ helmCharts:
         apiVersion: cert-manager.io/v1
         kind: ClusterIssuer
         metadata:
-          name: aws-prod
+          name: ${TP_CERTIFICATE_CLUSTER_ISSUER}
         spec:
           acme:
             email: cloud@tibco.com
             server: https://acme-v02.api.letsencrypt.org/directory
             privateKeySecretRef:
-              name: "aws-prod"
+              name: "${TP_CERTIFICATE_CLUSTER_ISSUER}"
             solvers:
               - dns01:
                   route53:
@@ -260,7 +261,7 @@ helmCharts:
         spec:
           secretName: tp-certificate-main-ingress
           issuerRef:
-            name: aws-prod
+            name: ${TP_CERTIFICATE_CLUSTER_ISSUER}
             kind: ClusterIssuer
           dnsNames:
             - '*.${TP_DOMAIN}'

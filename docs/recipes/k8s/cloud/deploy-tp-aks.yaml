@@ -41,15 +41,14 @@ meta:
     TP_DISK_STORAGE_CLASS: "azure-disk-sc" # name of azure disk storage class
     TP_FILE_ENABLED: "true" # to enable azure files storage class
     TP_FILE_STORAGE_CLASS: "azure-files-sc" # name of azure files storage class
-    ## please note: to support nfs protocol the storage account tier should be Premium with kind FileStorage in supported regions: https://learn.microsoft.com/en-us/troubleshoot/azure/azure-storage/files-troubleshoot-linux-nfs?tabs=RHEL#unable-to-create-an-nfs-share
-    TP_STORAGE_ACCOUNT_NAME: "" # replace with name of existing storage account to be used for azure file shares
-    TP_STORAGE_ACCOUNT_RESOURCE_GROUP: "" # replace with name of storage account resource group
     # o11y
     TP_ES_RELEASE_NAME: "dp-config-es" # name of dp-config-es release name
     # flow control
     TP_INSTALL_K8S: true # change to true to install k8s
     TP_INSTALL_RESOURCE_FOLDER: "/workspace/resources"
     TP_INSTALL_CHART_VALUES_FILE: "/workspace/resources/global-values.yaml"
+    TP_INSTALL_STORAGE: ${GUI_TP_INSTALL_STORAGE:-true}
+    TP_INSTALL_STORAGE_EMS: ${GUI_TP_INSTALL_STORAGE_EMS:-false} # set to true to install storage for TIBCO Enterprise Message Service™ (EMS) recommended production
     TP_SCRIPT_BRANCH: main
     TP_INSTALL_POSTGRES: ${GUI_TP_INSTALL_POSTGRES:-true}
     TP_INSTALL_O11Y: ${GUI_TP_INSTALL_O11Y:-false}
@@ -151,8 +150,9 @@ helmCharts:
         mountPath: /etc/kubernetes
         readOnly: true
       extraArgs:
-        # add filter to only sync only public Ingresses with this annotation
-      - "--ingress-class=${TP_MAIN_INGRESS_CLASS_NAME}"
+        # only register DNS for these ingress classes
+        - "--ingress-class=${TP_MAIN_INGRESS_CLASS_NAME}"
+        - "--ingress-class=${TP_INGRESS_CLASS}"
   cluster:
     names:
       - ${TP_CLUSTER_NAME}
@@ -274,6 +274,7 @@ helmCharts:
     timeout: 1h
     createNamespace: true
 - name: dp-config-aks
+  condition: ${TP_INSTALL_STORAGE}
   version: "1.2.4"
   repo:
     helm:
@@ -282,8 +283,6 @@ helmCharts:
     keepPrevious: true
     base64Encoded: false
     content: |
-      dns:
-        domain: "${TP_DOMAIN}"
       httpIngress:
         enabled: false
       clusterIssuer:
@@ -292,34 +291,70 @@ helmCharts:
         azuredisk:
           enabled: ${TP_DISK_ENABLED}
           name: ${TP_DISK_STORAGE_CLASS}
-          # reclaimPolicy: "Retain" # uncomment for TIBCO Enterprise Message Service™ (EMS) recommended production configuration (default is Delete)
-      ## uncomment following section, if you want to use TIBCO Enterprise Message Service™ (EMS) recommended production configuration
-          # parameters:
-          #   skuName: Premium_LRS # other values: Premium_ZRS, StandardSSD_LRS (default)
-        azurefile:
+       azurefile: # this is used for standard CP/DP storage
           enabled: ${TP_FILE_ENABLED}
           name: ${TP_FILE_STORAGE_CLASS}
-          # reclaimPolicy: "Retain" # uncomment for TIBCO Enterprise Message Service™ (EMS) recommended production configuration (default is Delete)
-      ## following section is required if you want to use an existing storage account. Otherwise, storage account is created in the same resource group.
-          # parameters:
-          #   storageAccount: ${TP_STORAGE_ACCOUNT_NAME}
-          #   resourceGroup: ${TP_STORAGE_ACCOUNT_RESOURCE_GROUP}
-      ## uncomment following lines for skuName and protocol, if you want to use EMS recommended production configuration
-          #   skuName: Premium_LRS # other values: Premium_ZRS
-          #   protocol: nfs
-          ## TIBCO Enterprise Message Service™ (EMS) recommended production values for mountOptions
-          # mountOptions:
-          #   - soft
-          #   - timeo=300
-          #   - actimeo=1
-          #   - retrans=2
-          #   - _netdev
+          parameters:
+            skuName: Premium_LRS
+            allowBlobPublicAccess: "false"
+            networkEndpointType: privateEndpoint
+          mountOptions:
+            - mfsymlinks
+            - cache=strict
+            - nosharesock
       ingress-nginx:
         enabled: false
   cluster:
     names:
       - ${TP_CLUSTER_NAME}
   releaseName: dp-config-aks-storage
+  namespace: storage-system
+  flags:
+    wait: true
+    timeout: 1h
+    createNamespace: true
+- name: dp-config-aks
+  version: "1.2.4"
+  condition: ${TP_INSTALL_STORAGE_EMS}
+  repo:
+    helm:
+      url: ${TP_CHART_REPO}
+  values:
+    keepPrevious: true
+    base64Encoded: false
+    content: |
+      httpIngress:
+        enabled: false
+      clusterIssuer:
+        create: false
+      storageClass:
+        azuredisk:
+          enabled: true
+          name: azure-disk-sc-ems
+          reclaimPolicy: "Retain"
+          parameters:
+            skuName: Premium_LRS # other values: Premium_ZRS, StandardSSD_LRS (default)
+        azurefile:
+          enabled: true
+          name: azure-files-sc-ems
+          reclaimPolicy: "Retain"
+          parameters:
+            allowBlobPublicAccess: "false"
+            networkEndpointType: privateEndpoint
+            skuName: Premium_LRS # other values: Premium_ZRS
+            protocol: nfs
+          mountOptions:
+            - soft
+            - timeo=300
+            - actimeo=1
+            - retrans=2
+            - _netdev
+      ingress-nginx:
+        enabled: false
+  cluster:
+    names:
+      - ${TP_CLUSTER_NAME}
+  releaseName: dp-config-aks-storage-ems
   namespace: storage-system
   flags:
     wait: true
