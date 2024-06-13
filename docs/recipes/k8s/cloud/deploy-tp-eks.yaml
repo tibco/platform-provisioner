@@ -25,7 +25,10 @@ meta:
     TP_CLUSTER_VPC_CIDR: "10.180.0.0/16"
     # ingress
     TP_INGRESS_CLASS: ${GUI_TP_INGRESS_CLASS:-"nginx"}
+    TP_SECONDARY_INGRESS_CLASS: ${GUI_TP_SECONDARY_INGRESS_CLASS}
+    TP_SECONDARY_DOMAIN: ${GUI_TP_SECONDARY_DOMAIN} # the star domain for the secondary ingress <cp/dp-env>-apps.${SANDBOX}.dataplanes.pro
     TP_INGRESS_RELEASE_NAME: dp-config-aws-ingress
+    TP_SECONDARY_INGRESS_RELEASE_NAME: dp-config-aws-secondary-ingress
     TP_INGRESS_NAMESPACE: ingress-system
     TP_ES_RELEASE_NAME: dp-config-es
     TP_CERTIFICATE_CLUSTER_ISSUER: ${GUI_TP_CERTIFICATE_CLUSTER_ISSUER:-"tp-prod"} # the cluster issuer for tp-certificate
@@ -49,7 +52,8 @@ meta:
     TP_ENABLE_O11Y_DAEMONSET: ${GUI_TP_ENABLE_O11Y_DAEMONSET:-true}
     # Do not change, variables to configure nginx/kong related resources based on ingressclass passed
     TP_ENABLE_NGINX: $([[ "$TP_INGRESS_CLASS" == "nginx" ]] && echo "true" || echo "false")
-    TP_ENABLE_KONG: $([[ "$TP_INGRESS_CLASS" == "kong" ]] && echo "true" || echo "false")
+    TP_ENABLE_SECONDARY_KONG: $([[ "$TP_SECONDARY_INGRESS_CLASS" == "kong" ]] && echo "true" || echo "false")
+    TP_DEPLOY_SECONDARY_INGRESS: $([[ "$TP_ENABLE_SECONDARY_KONG" == "true" ]] && echo "true" || echo "false")
     TP_HTTP_INGRESS_BACKEND_SERVICE: ${TP_INGRESS_RELEASE_NAME}-$( ( [[  "$TP_INGRESS_CLASS" == "nginx" ]] && echo "ingress-nginx-controller" ) || ( [[ "$TP_INGRESS_CLASS" == "kong" ]] && echo "kong-proxy" ) )
     TP_INSTALL_O11Y: ${GUI_TP_INSTALL_O11Y:-false}
     TP_SKIP_GENERATE_CLUSTER_ISSUER: false
@@ -225,7 +229,7 @@ helmCharts:
           extraArgs:
             default-ssl-certificate: ${TP_INGRESS_NAMESPACE}/tp-certificate-main-ingress
       kong:
-        enabled: ${TP_ENABLE_KONG}
+        enabled: false
   cluster:
     names:
       - ${TP_CLUSTER_NAME}
@@ -265,6 +269,79 @@ helmCharts:
             kind: ClusterIssuer
           dnsNames:
             - '*.${TP_DOMAIN}'
+        EOF
+- name: dp-config-aws
+  version: "1.2.11"
+  condition: ${TP_DEPLOY_SECONDARY_INGRESS}
+  repo:
+    helm:
+      url: ${TP_CHART_REPO}
+  values:
+    keepPrevious: false
+    content: |
+      dns:
+        domain: "${TP_SECONDARY_DOMAIN}"
+      httpIngress:
+        enabled: false # set to true to use ALB
+      ingress-nginx:
+        enabled: false
+      kong:
+        enabled: ${TP_ENABLE_SECONDARY_KONG}
+        secretVolumes:
+        - tp-certificate-secondary-ingress
+        env:
+          ssl_cert: /etc/secrets/tp-certificate-secondary-ingress/tls.crt
+          ssl_cert_key: /etc/secrets/tp-certificate-secondary-ingress/tls.key
+        proxy:
+          type: LoadBalancer
+          loadBalancerClass: service.k8s.aws/nlb # 
+          annotations:
+            service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: ip # by default it is instance which will route traffic to instance nodePort
+            service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing # used for aws-load-balancer-controller to create public NLB
+            external-dns.alpha.kubernetes.io/hostname: "*.${TP_SECONDARY_DOMAIN}"
+          tls:
+            enabled: true
+          http:
+            enabled: false
+  cluster:
+    names:
+      - ${TP_CLUSTER_NAME}
+  releaseName: ${TP_SECONDARY_INGRESS_RELEASE_NAME}
+  namespace: ${TP_INGRESS_NAMESPACE}
+  flags:
+    wait: true
+    timeout: 1h
+    createNamespace: true
+  hooks:
+    preDeploy:
+      ignoreErrors: false
+      base64Encoded: false
+      skip: ${TP_SKIP_GENERATE_CLUSTER_ISSUER}
+      content: |
+        # create a namespace for the main ingress
+        kubectl apply -f - <<EOF
+        apiVersion: v1
+        kind: Namespace
+        metadata:
+          name: ${TP_INGRESS_NAMESPACE}
+          labels:
+            networking.platform.tibco.com/non-cp-ns: enable
+        EOF
+        
+        # create a certificate for the kong apps ingress
+        kubectl apply -f - << EOF
+        apiVersion: cert-manager.io/v1
+        kind: Certificate
+        metadata:
+          name: tp-certificate-secondary-ingress
+          namespace: ${TP_INGRESS_NAMESPACE}
+        spec:
+          secretName: tp-certificate-secondary-ingress
+          issuerRef:
+            name: aws-prod
+            kind: ClusterIssuer
+          dnsNames:
+            - '*.${TP_SECONDARY_DOMAIN}'
         EOF
 - name: dp-config-aws
   version: "1.2.11"
