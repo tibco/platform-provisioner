@@ -55,8 +55,6 @@ meta:
     # Do not change, variables to configure nginx/kong related resources based on ingressclass passed
     TP_ENABLE_NGINX: $([[ "$TP_INGRESS_CLASS" == "nginx" ]] && echo "true" || echo "false")
     TP_ENABLE_KONG: $([[ "$TP_INGRESS_CLASS" == "kong" ]] && echo "true" || echo "false")
-    TP_ENABLE_NGINX_WITH_KONG: $([[ "$TP_INGRESS_CLASS" == "kong" ]] && echo "true" || echo "false")
-    TP_HTTP_INGRESS_BACKEND_SERVICE: ${TP_INGRESS_RELEASE_NAME}-$( ( [[  "$TP_INGRESS_CLASS" == "nginx" ]] && echo "ingress-nginx-controller" ) || ( [[ "$TP_INGRESS_CLASS" == "kong" ]] && echo "kong-proxy" ) )
     TP_ENABLE_O11Y_DAEMONSET: ${GUI_TP_ENABLE_O11Y_DAEMONSET:-true}
   tools:
     yq: "4.40"
@@ -151,7 +149,6 @@ helmCharts:
         readOnly: true
       extraArgs:
         # only register DNS for these ingress classes
-        - "--ingress-class=${TP_MAIN_INGRESS_CLASS_NAME}"
         - "--ingress-class=${TP_INGRESS_CLASS}"
   cluster:
     names:
@@ -163,111 +160,37 @@ helmCharts:
     timeout: 1h
     createNamespace: true
 - name: dp-config-aks
+  condition: ${TP_ENABLE_NGINX}
   version: "1.2.4"
   repo:
     helm:
       url: ${TP_CHART_REPO}
   values:
     keepPrevious: true
-    base64Encoded: false
     content: |
-      global:
-        dnsSandboxSubdomain: "${TP_SANDBOX}"          # must be the sandbox domain as we create DNS zone for this
-        dnsGlobalTopDomain: "${TP_TOP_LEVEL_DOMAIN}"  # must be the top level domain
-        azureSubscriptionDnsResourceGroup: "${TP_DNS_RESOURCE_GROUP}"
       dns:
         domain: "${TP_DOMAIN}"
       httpIngress:
-        enabled: true
-        name: ${TP_INGRESS_CLASS}
-        backend:
-          serviceName: ${TP_HTTP_INGRESS_BACKEND_SERVICE}
-        ingressClassName: ${TP_MAIN_INGRESS_CLASS_NAME}
-        annotations:
-          external-dns.alpha.kubernetes.io/hostname: "*.${TP_DOMAIN}"
-          # this will be used for external-dns annotation filter
-      storageClass:
-        azuredisk:
-          enabled: false
-        azurefile:
-          enabled: false
+        enabled: false
       ingress-nginx:
         enabled: ${TP_ENABLE_NGINX}
         controller:
+          service:
+            type: LoadBalancer # use NLB for nginx, set to ClusterIP when using ALB
+            annotations:
+              external-dns.alpha.kubernetes.io/hostname: "*.${TP_DOMAIN}"
+            enableHttp: false # disable http 80 port on service and NLB
           config:
             # required by apps swagger
-            use-forwarded-headers: "true"
-      ## following section is required to send traces using nginx
-      ## uncomment the below commented section to run/re-run the command, once TP_NAMESPACE is available
-          # enable-opentelemetry: "true"
-          # log-level: debug
-          # opentelemetry-config: /etc/nginx/opentelemetry.toml
-          # opentelemetry-operation-name: HTTP $request_method $service_name $uri
-          # opentelemetry-trust-incoming-span: "true"
-          # otel-max-export-batch-size: "512"
-          # otel-max-queuesize: "2048"
-          # otel-sampler: AlwaysOn
-          # otel-sampler-parent-based: "false"
-          # otel-sampler-ratio: "1.0"
-          # otel-schedule-delay-millis: "5000"
-          # otel-service-name: nginx-proxy
-          # otlp-collector-host: otel-userapp.${TP_NAMESPACE}.svc
-          # otlp-collector-port: "4317"
-        # opentelemetry:
-          # enabled: true
+            use-forwarded-headers: 'true'          # PDP-945
+          extraArgs:
+            default-ssl-certificate: ${TP_INGRESS_NAMESPACE}/tp-certificate-main-ingress
       kong:
-        enabled: ${TP_ENABLE_KONG}
+        enabled: false
   cluster:
     names:
       - ${TP_CLUSTER_NAME}
   releaseName: ${TP_INGRESS_RELEASE_NAME}
-  namespace: ingress-system
-  flags:
-    wait: true
-    timeout: 1h
-    createNamespace: true
-    extra: "--values ${TP_INSTALL_CHART_VALUES_FILE}"
-  hooks:
-    preDeploy:
-      ignoreErrors: false
-      base64Encoded: false
-      skip: false
-      content: |
-        mkdir -p "${TP_INSTALL_RESOURCE_FOLDER}"
-        touch "${TP_INSTALL_CHART_VALUES_FILE}"
-        export client_id=$(az aks show --resource-group "${TP_RESOURCE_GROUP}" --name "${TP_CLUSTER_NAME}" --query "identityProfile.kubeletidentity.clientId" --output tsv)
-        export subscription_id=$(az account show --query id -o tsv)
-        yq eval '.global += {"azureAwiAsoDnsClientId": env(client_id), "azureSubscriptionId": env(subscription_id)}' "${TP_INSTALL_CHART_VALUES_FILE}" -i
-        echo "injected values:"
-        cat "${TP_INSTALL_CHART_VALUES_FILE}"
-- name: dp-config-aks
-  condition: ${TP_ENABLE_NGINX_WITH_KONG}
-  version: "1.2.4"
-  repo:
-    helm:
-      url: ${TP_CHART_REPO}
-  values:
-    keepPrevious: false
-    content: |
-      dns:
-        domain: "${TP_DOMAIN}"
-      httpIngress:
-        enabled: true
-        name: nginx-kong
-        annotations: null
-        path: '/tibco/(hub|bw|flogo)/?(.*)'
-        ingressClassName: kong
-        backend:
-          serviceName: ${TP_INGRESS_RELEASE_NAME}-nginx-controller
-      ingress-nginx:
-        enabled: true
-        controller:
-          config:
-            use-forwarded-headers: 'true'          # PDP-945
-  cluster:
-    names:
-      - ${TP_CLUSTER_NAME}
-  releaseName: ${TP_INGRESS_RELEASE_NAME}-nginx
   namespace: ingress-system
   flags:
     wait: true
