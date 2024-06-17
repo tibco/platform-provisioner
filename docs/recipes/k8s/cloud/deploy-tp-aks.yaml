@@ -28,15 +28,20 @@ meta:
     # domain
     TP_TOP_LEVEL_DOMAIN: ${GUI_TP_TOP_LEVEL_DOMAIN} # the top level domain for the main ingress
     TP_SANDBOX: ${GUI_TP_SANDBOX} # the sandbox for the main ingress
-    TP_DOMAIN: ${TP_SANDBOX}.${TP_TOP_LEVEL_DOMAIN} # the actual domain for the TIBCO platform. Sample format: <cp/dp-env>.${SANDBOX}.${TP_TOP_LEVEL_DOMAIN}
+    TP_SANDBOX_SUBDOMAIN_MAIN_INGRESS: ${GUI_TP_SANDBOX_SUBDOMAIN_MAIN_INGRESS}
+    TP_DOMAIN: ${TP_SANDBOX_SUBDOMAIN_MAIN_INGRESS}.${TP_SANDBOX}.${TP_TOP_LEVEL_DOMAIN} # the actual domain for the TIBCO platform. Sample format: <cp/dp-env>.${SANDBOX}.${TP_TOP_LEVEL_DOMAIN}
+    TP_SANDBOX_SUBDOMAIN_SECONDARY_INGRESS: ${GUI_TP_SANDBOX_SUBDOMAIN_SECONDARY_INGRESS}    
+    TP_SECONDARY_DOMAIN: ${TP_SANDBOX_SUBDOMAIN_SECONDARY_INGRESS}.${TP_SANDBOX}.${TP_TOP_LEVEL_DOMAIN} # the star domain for the secondary ingress <cp/dp-env>-apps.${SANDBOX}.${TP_TOP_LEVEL_DOMAIN}   
     # ingress
     TP_GENERATE_CLUSTER_ISSUER: ${GUI_TP_GENERATE_CLUSTER_ISSUER:-true}
     TP_CERTIFICATE_CLUSTER_ISSUER: ${GUI_TP_CERTIFICATE_CLUSTER_ISSUER:-"cic-cert-subscription-scope-production-main"} # the cluster issuer
     TP_MAIN_INGRESS_CLASS_NAME: "azure-application-gateway" # name of azure application gateway ingress controller
     TP_DNS_RESOURCE_GROUP: ${GUI_TP_DNS_RESOURCE_GROUP} # must provide
     TP_INGRESS_CLASS: ${GUI_TP_INGRESS_CLASS:-"nginx"} # name of main ingress class used by capabilities
+    TP_SECONDARY_INGRESS_CLASS: ${GUI_TP_SECONDARY_INGRESS_CLASS}
     TP_INGRESS_NAMESPACE: ${GUI_TP_INGRESS_NAMESPACE:-"ingress-system"} # namespace for the ingress controller
     TP_INGRESS_RELEASE_NAME: dp-config-aks-ingress
+    TP_SECONDARY_INGRESS_RELEASE_NAME: dp-config-aks-secondary-ingress
     # network policy
     TP_CLUSTER_ENABLE_NETWORK_POLICY: ${GUI_TP_CLUSTER_ENABLE_NETWORK_POLICY:-false}
     # storage
@@ -57,8 +62,11 @@ meta:
     TP_INSTALL_O11Y: ${GUI_TP_INSTALL_O11Y:-false}
     # Do not change, variables to configure nginx/kong related resources based on ingressclass passed
     TP_ENABLE_NGINX: $([[ "$TP_INGRESS_CLASS" == "nginx" ]] && echo "true" || echo "false")
-    TP_ENABLE_KONG: $([[ "$TP_INGRESS_CLASS" == "kong" ]] && echo "true" || echo "false")
+    TP_ENABLE_SECONDARY_KONG: $([[ "$TP_SECONDARY_INGRESS_CLASS" == "kong" ]] && echo "true" || echo "false")
+    TP_DEPLOY_SECONDARY_INGRESS: $([[ "$TP_ENABLE_SECONDARY_KONG" == "true" ]] && echo "true" || echo "false")
     TP_SKIP_GENERATE_MAIN_INGRESS_CERTIFICATE: false
+    TP_SKIP_GENERATE_SECONDARY_INGRESS_CERTIFICATE: false
+
   tools:
     yq: "4.40"
     helm: "3.13"
@@ -274,6 +282,77 @@ helmCharts:
             kind: ClusterIssuer
           dnsNames:
             - '*.${TP_DOMAIN}'
+        EOF
+- name: dp-config-aks
+  condition: ${TP_DEPLOY_SECONDARY_INGRESS}
+  version: "1.2.4"
+  repo:
+    helm:
+      url: ${TP_CHART_REPO}
+  values:
+    keepPrevious: true
+    content: |
+      clusterIssuer:
+        create: false
+      httpIngress:
+        enabled: false
+      ingress-nginx:
+        enabled: false
+      kong:
+        enabled: ${TP_ENABLE_SECONDARY_KONG}
+        secretVolumes:
+        - tp-certificate-secondary-ingress
+        env:
+          ssl_cert: /etc/secrets/tp-certificate-secondary-ingress/tls.crt
+          ssl_cert_key: /etc/secrets/tp-certificate-secondary-ingress/tls.key
+        proxy:
+          type: LoadBalancer
+          annotations:
+            external-dns.alpha.kubernetes.io/hostname: "*.${TP_SECONDARY_DOMAIN}"
+            service.beta.kubernetes.io/azure-load-balancer-health-probe-request-path: /healthz
+          tls:
+            enabled: true
+          http:
+            enabled: false
+  cluster:
+    names:
+      - ${TP_CLUSTER_NAME}
+  releaseName: ${TP_SECONDARY_INGRESS_RELEASE_NAME}
+  namespace: ${TP_INGRESS_NAMESPACE}
+  flags:
+    wait: true
+    timeout: 1h
+    createNamespace: true
+  hooks:
+    preDeploy:
+      ignoreErrors: false
+      base64Encoded: false
+      skip: ${TP_SKIP_GENERATE_SECONDARY_INGRESS_CERTIFICATE}
+      content: |
+        # create a namespace for the main ingress
+        kubectl apply -f - <<EOF
+        apiVersion: v1
+        kind: Namespace
+        metadata:
+          name: ${TP_INGRESS_NAMESPACE}
+          labels:
+            networking.platform.tibco.com/non-cp-ns: enable
+        EOF
+        
+        # create a certificate for the main ingress
+        kubectl apply -f - << EOF
+        apiVersion: cert-manager.io/v1
+        kind: Certificate
+        metadata:
+          name: tp-certificate-secondary-ingress
+          namespace: ${TP_INGRESS_NAMESPACE}
+        spec:
+          secretName: tp-certificate-secondary-ingress
+          issuerRef:
+            name: ${TP_CERTIFICATE_CLUSTER_ISSUER}
+            kind: ClusterIssuer
+          dnsNames:
+            - '*.${TP_SECONDARY_DOMAIN}'
         EOF
 - name: dp-config-aks
   condition: ${TP_INSTALL_STORAGE}
