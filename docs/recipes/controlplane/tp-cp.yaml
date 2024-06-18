@@ -538,7 +538,7 @@ helmCharts:
                     pathType: Prefix
                     backend:
                       service:
-                        name: hybrid-proxy-${CP_INSTANCE_ID}
+                        name: hybrid-proxy # CP_PROVIDER must set to local to create this service
                         port:
                           number: 105
         EOF
