@@ -23,7 +23,7 @@ meta:
     CP_CLUSTER_NAME: ${GUI_CP_CLUSTER_NAME:-"cp-cluster"}
     CP_NAMESPACE: ${GUI_CP_NAMESPACE:-"${CP_INSTANCE_ID}-ns"}
     # domain
-    CP_DNS_DOMAIN: ${GUI_CP_SANDBOX:-"localhost"}.dataplanes.pro # in case of cloud deployment; the sandbox will be <env sandbox>.<account sandbox>
+    CP_DNS_DOMAIN: ${GUI_CP_DNS_DOMAIN:-"localhost.dataplanes.pro"}
     CP_SERVICE_DNS_DOMAIN: ${CP_INSTANCE_ID}-my.${CP_DNS_DOMAIN}
     CP_TUNNEL_DNS_DOMAIN: ${CP_INSTANCE_ID}-tunnel.${CP_DNS_DOMAIN}
     # storage
