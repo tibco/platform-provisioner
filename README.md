@@ -61,7 +61,7 @@ In this case, the recipe and pipeline will be scheduled by Tekton and run in the
 ```bash
 export GITHUB_TOKEN=""
 export PIPELINE_SKIP_TEKTON_DASHBOARD=false
-export PLATFORM_PROVISIONER_PIPLINE_REPO="https://${GITHUB_TOKEN}@raw.githubusercontent.com/tibco/platform-provisioner/gh-pages/"
+export PLATFORM_PROVISIONER_PIPELINE_REPO="https://${GITHUB_TOKEN}@raw.githubusercontent.com/tibco/platform-provisioner/gh-pages/"
 /bin/bash -c "$(curl -fsSL https://${GITHUB_TOKEN}@raw.githubusercontent.com/tibco/platform-provisioner/main/dev/platform-provisioner-install.sh)"
 ```
 
