@@ -27,7 +27,7 @@ jobs:
           python-version: '3.10'
 
       - name: Set up chart-testing
-        uses: tibco/cicinfra-integration@v2.6.1-c1-chart-testing-action
+        uses: helm/chart-testing-action@v2.6.1
 
       - name: Run chart-testing (list-changed)
         id: list-changed
