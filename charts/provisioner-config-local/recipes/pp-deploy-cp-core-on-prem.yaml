@@ -575,78 +575,22 @@ helmCharts:
           REGION_SECRET: "${CP_IDM_REGION_SECRET}"
           SENDGRID_SERVICE_API_KEY: "${CP_IDM_SENDGRID_SERVICE_API_KEY}" # for email service
           CP_ENCRYPTION_SECRET: "${CP_IDM_CP_ENCRYPTION_SECRET}"
-        podSecurityContext:
-          runAsNonRoot: false
-          runAsUser: 0
-          runAsGroup: 0
-          fsGroup: 0
-          fsGroupChangePolicy: "Always"
-          seccompProfile:
-            type: RuntimeDefault
         securityContext: {}
         containerSecurityContext: 
           hawkinfrajobs: 
             runAsNonRoot: false
       tp-cp-recipes:
         tp-cp-infra-recipes:
-          podSecurityContext:
-            runAsNonRoot: false
-            runAsUser: 0
-            runAsGroup: 0
-            fsGroup: 0
-            fsGroupChangePolicy: "Always"
-            seccompProfile:
-              type: RuntimeDefault
           securityContext: {}
         tp-cp-bwce-recipes:
-          podSecurityContext:
-            runAsNonRoot: false
-            runAsUser: 0
-            runAsGroup: 0
-            fsGroup: 0
-            fsGroupChangePolicy: "Always"
-            seccompProfile:
-              type: RuntimeDefault
           securityContext: {}
         tp-cp-flogo-recipes:
-          podSecurityContext:
-            runAsNonRoot: false
-            runAsUser: 0
-            runAsGroup: 0
-            fsGroup: 0
-            fsGroupChangePolicy: "Always"
-            seccompProfile:
-              type: RuntimeDefault
           securityContext: {}
         tp-cp-tibcohub-recipes:
-          podSecurityContext:
-            runAsNonRoot: false
-            runAsUser: 0
-            runAsGroup: 0
-            fsGroup: 0
-            fsGroupChangePolicy: "Always"
-            seccompProfile:
-              type: RuntimeDefault
           securityContext: {}
         dp-oauth2proxy-recipes:
-          podSecurityContext:
-            runAsNonRoot: false
-            runAsUser: 0
-            runAsGroup: 0
-            fsGroup: 0
-            fsGroupChangePolicy: "Always"
-            seccompProfile:
-              type: RuntimeDefault
           securityContext: {}
         tp-cp-servicemesh-recipes:
-          podSecurityContext:
-            runAsNonRoot: false
-            runAsUser: 0
-            runAsGroup: 0
-            fsGroup: 0
-            fsGroupChangePolicy: "Always"
-            seccompProfile:
-              type: RuntimeDefault
           securityContext: {}
       tp-cp-integration:
         tp-cp-integration-common:
