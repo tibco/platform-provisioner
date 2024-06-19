@@ -338,7 +338,7 @@ helmCharts:
         spec:
           secretName: tp-certificate-secondary-ingress
           issuerRef:
-            name: aws-prod
+            name: ${TP_CERTIFICATE_CLUSTER_ISSUER}
             kind: ClusterIssuer
           dnsNames:
             - '*.${TP_SECONDARY_DOMAIN}'
