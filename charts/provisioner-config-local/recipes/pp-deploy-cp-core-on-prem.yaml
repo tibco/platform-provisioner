@@ -575,23 +575,6 @@ helmCharts:
           REGION_SECRET: "${CP_IDM_REGION_SECRET}"
           SENDGRID_SERVICE_API_KEY: "${CP_IDM_SENDGRID_SERVICE_API_KEY}" # for email service
           CP_ENCRYPTION_SECRET: "${CP_IDM_CP_ENCRYPTION_SECRET}"
-        securityContext: {}
-        containerSecurityContext: 
-          hawkinfrajobs: 
-            runAsNonRoot: false
-      tp-cp-recipes:
-        tp-cp-infra-recipes:
-          securityContext: {}
-        tp-cp-bwce-recipes:
-          securityContext: {}
-        tp-cp-flogo-recipes:
-          securityContext: {}
-        tp-cp-tibcohub-recipes:
-          securityContext: {}
-        dp-oauth2proxy-recipes:
-          securityContext: {}
-        tp-cp-servicemesh-recipes:
-          securityContext: {}
       tp-cp-integration:
         tp-cp-integration-common:
           fileserver:
@@ -604,10 +587,6 @@ helmCharts:
                 memory: 200Mi
         tp-cp-integration-bwce:
           bw-webserver:
-            securityContext: {}
-            global:
-              fluentbit:
-                securityContext: {}
             bwwebserver:
               resources:
                 requests:
