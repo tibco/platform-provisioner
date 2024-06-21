@@ -35,8 +35,10 @@ meta:
     GITHUB_TOKEN: "" # You need to set GITHUB_TOKEN for CP dev in private repo
     TP_RESOURCE_GROUP: ""
     TP_AUTHORIZED_IP: "" # Your public IP
-    TP_CLUSTER_NAME: ""
-    TP_DOMAIN: ""
+    TP_CLUSTER_NAME: "" # cluster name
+    TP_TOP_LEVEL_DOMAIN: "" # eg. azure.dataplanes.pro for azure envs
+    TP_SANDBOX: "" # This will be used for the all ingresses for this AKS. For TIBCO Platform; we create top level domain with sandbox for each Azure       account. The domain will be like: ${TP_SANDBOX}.azure.dataplanes.pro. We can find the supported sandbox in Azure DNS resource group. The sandbox is based on account. eg: "platform-int". If you have region on certificate; the region need to put here like "eu-west-1.platform-int". sandbox list doc: https://confluence.tibco.com/pages/viewpage.action?pageId=190135472 
+    TP_MAIN_INGRESS_SANDBOX_SUBDOMAIN: "" # This will be used for the main ingress for this AKS. For TIBCO Platform; we create top level domain with sandbox for each Azure account. The domain will be like: ${TP_SANDBOX}.azure.dataplanes.pro. It is suggested to add an environment prefix to the domain using TP_MAIN_INGRESS_SANDBOX_SUBDOMAIN variable . eg: ${TP_MAIN_INGRESS_SANDBOX_SUBDOMAIN}.${TP_SANDBOX}.azure.dataplanes.pro.
 ```
 
 ## Deploy TIBCO Control Plane on AKS
@@ -58,15 +60,15 @@ Environment variables that need to set in the recipe:
 meta:
   globalEnvVariable:
     GITHUB_TOKEN: "" # You need to set GITHUB_TOKEN for CP dev in private repo
-    
+    AZURE_RESOURCE_GROUP: "" # Resource group name
     CP_PROVIDER: "azure"
-    CP_CLUSTER_NAME: ""
-    CP_DNS_DOMAIN: ""
-    CP_STORAGE_CLASS: ""
+    CP_CLUSTER_NAME: "" # cluster name
+    CP_DNS_DOMAIN: "" # This is complete domain including TP_MAIN_INGRESS_SANDBOX_SUBDOMAIN and TP_SANDBOX which were used to while creating TP Cluster eg. ${TP_MAIN_INGRESS_SANDBOX_SUBDOMAIN}.${TP_SANDBOX}.azure.dataplanes.pro
+    CP_STORAGE_CLASS: "" # eg. For Azure use `azure-files-sc`
 
     # container registry
-    CP_CONTAINER_REGISTRY: "" # use jFrog for CP production deployment
-    CP_CONTAINER_REGISTRY_USERNAME: ""
-    CP_CONTAINER_REGISTRY_PASSWORD: ""
+    CP_CONTAINER_REGISTRY: "" # use jFrog for CP production deployment  eg. `csgprduswrepoedge.jfrog.io`
+    CP_CONTAINER_REGISTRY_USERNAME: "" # registry username
+    CP_CONTAINER_REGISTRY_PASSWORD: "" # registry password
 ```
 
