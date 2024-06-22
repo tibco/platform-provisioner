@@ -373,7 +373,7 @@ function common::assume_role() {
 
   # azure use case
   # the pattern is azure-72f677ccb9aa, the last section of Azure sub id
-  if echo "${_account}" | grep -q "-"; then
+  if echo "${_account}" | grep -q "azure-"; then
     common::debug "Looks like select Azure account ${_account}"
 
     # check if we have get-azure-sub-id function
