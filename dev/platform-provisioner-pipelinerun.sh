@@ -73,6 +73,7 @@ ${pipeline_recipe}
 # If yq is installed; we can get pipeline name from PIPELINE_INPUT_RECIPE
 if command -v yq >/dev/null 2>&1; then
   pipeline_name=$(cat "${PIPELINE_INPUT_RECIPE}" | yq ".kind | select(. != null)" )
+  pipeline_name=helm-install
 else
   echo "yq is not installed, please consider install yq to automatically get pipeline name from input recipe"
   echo "otherwise, please set the pipeline name in the environment variable PIPELINE_NAME as generic-runner or helm-install"

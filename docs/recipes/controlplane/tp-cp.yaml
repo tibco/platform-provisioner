@@ -70,7 +70,7 @@ meta:
     CP_PLATFORM_BASE_VERSION: ${CP_PLATFORM_BASE_VERSION:-1.2.140} # 1.2 GA release. use ^1.0.0 for latest
     # flow control
     CP_CREATE_NAMESPACE: true
-    CP_INSTALL_MAILDEV: true
+    CP_INSTALL_MAILDEV: false
     CP_INSTALL_MAILDEV_INGRESS: ${GUI_CP_INSTALL_MAILDEV_INGRESS:-true}
     CP_STORAGE_CREATE_PV: ${GUI_CP_STORAGE_CREATE_PV:-false} # create PV for control-plane-pv for Kind, MicroK8s and Azure use case
     CP_INSTALL_PLATFORM_BOOTSTRAP: true
@@ -566,24 +566,30 @@ helmCharts:
           db_ssl_mode: ${CP_DB_SSL_MODE}
           db_ssl_root_cert: ""
           db_username: ${CP_DB_USER_NAME}
+          fromAndReplyToEmailAddress: noreply@tcie.pro
+          emailServerType: smtp
           emailServer:
             ses:
               arn: ""
             smtp:
               password: ""
-              port: "1025"
-              server: development-mailserver.${CP_EXT_NAMESPACE}.svc.cluster.local
+              port: "25"
+              server: "smtp-relay-internal.tibco.com"
               username: ""
           admin:
             email: ${CP_ADMIN_EMAIL}
             firstname: "admin"
             lastname: "admin"
+            customerID: "admin"
           enableLogging: false
           environment: ${CP_ENVIRONMENT}
           IDENTITY_MANAGEMENT_JWT_KEY_STORE_PASSWORD: "${CP_IDM_IDENTITY_MANAGEMENT_JWT_KEY_STORE_PASSWORD}"
           REGION_SECRET: "${CP_IDM_REGION_SECRET}"
           SENDGRID_SERVICE_API_KEY: "${CP_IDM_SENDGRID_SERVICE_API_KEY}" # for email service
           CP_ENCRYPTION_SECRET: "${CP_IDM_CP_ENCRYPTION_SECRET}"
+      tp-cp-msg-contrib:
+        cp:
+          enableSecurityContext: false
       tp-cp-integration:
         tp-cp-integration-common:
           fileserver:
@@ -596,6 +602,12 @@ helmCharts:
                 memory: 200Mi
         tp-cp-integration-bwce:
           bw-webserver:
+            enabled: true
+            podSecuirtyContext: {}
+            securityContext: {}
+            global:
+              fluentbit:
+                securityContext: {}
             bwwebserver:
               resources:
                 requests:
@@ -649,6 +661,8 @@ helmCharts:
                   cpu: "150m"
                   memory: "150Mi"
         tp-cp-bwce-utilities:
+            bwce-utilities:
+              enabled: false
             resources:
               requests:
                 cpu: 80m
