@@ -26,7 +26,7 @@ export PIPELINE_CHART_REPO="${GITHUB_TOKEN}@raw.githubusercontent.com/tibco/plat
 ./dev/platform-provisioner.sh
 ```
 
-We now have a new AKS to be ready to deploy TIBCO Platform. 
+We now have a new AKS to be ready to deploy TIBCO Platform.
 
 For Azure, the pipeline needs to set a special account name as environment variable. So that the pipeline knows to try Azure.
 ```bash
