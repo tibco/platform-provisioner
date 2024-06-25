@@ -16,6 +16,7 @@ meta:
     GITHUB_TOKEN: "${GUI_GITHUB_TOKEN}" # You need to set GITHUB_TOKEN for local use. For pipeline, it will be set by pipeline
     GITHUB_USER_NAME: ${GUI_GITHUB_USER_NAME:-"cp-test"}
     CP_CHART_REPO: ${GUI_CP_CHART_REPO:-"https://tibcosoftware.github.io/tp-helm-charts"} # TIBCO Platform public repo
+    DP_CHART_REPO: ${GUI_DP_CHART_REPO:-"https://tibcosoftware.github.io/tp-helm-charts"} # The repo that Data Plane will use
     # env
     CP_INSTANCE_ID: ${GUI_CP_INSTANCE_ID:-"cp1"}
     CP_PROVIDER: ${GUI_CP_PROVIDER:-local} # deployment target. Example: aws, azure, local.
@@ -357,7 +358,7 @@ helmCharts:
                 auth:
                   password: ${GITHUB_TOKEN}
                   username: ${GITHUB_USER_NAME}
-                repoUrl: https://raw.githubusercontent.com/tibco/tp-helm-charts/gh-pages
+                repoUrl: ${DP_CHART_REPO}
               default: true
               type: chart-museum
           dpMetadata:
@@ -489,6 +490,7 @@ helmCharts:
         EOF
         
         else
+        # create ingress for router and hybrid-proxy without TLS use case
           kubectl apply -f - <<EOF
         kind: Ingress
         apiVersion: networking.k8s.io/v1
