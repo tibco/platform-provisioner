@@ -56,7 +56,7 @@ export PIPELINE_CHART_REPO="${GITHUB_TOKEN}@raw.githubusercontent.com/tibco/plat
 ./dev/platform-provisioner.sh
 ```
 
-By default; maildev will be installed. You can access maildev using: http://maildev.localhost.dataplanes.pro
+By default; maildev will be installed. You can access maildev using: http://mail.<CP_DNS_DOMAIN>
 
 Environment variables that need to set in the recipe:
 ```yaml
