@@ -84,16 +84,18 @@ menuConfig:
 - label: "Maintenance"
   icon: 'pi pi-fw pi-wrench'
   items:
-  - label: "Data Plane"
+  - label: "TP Cluster"
+    icon: 'pi pi-th-large'
     items:
-    - label: "Info"
-      to: "/pipelines/generic-runner?title=data-plane-info"
-      config: pp-maintain-dp-info.yaml
-  - label: "AWS"
-    items:
-    - label: "Refresh ECR token"
-      to: "/pipelines/generic-runner?title=Refresh ECR token"
-      config: pp-maintain-aws-refresh-ecr-token.yaml
+    - label: "TP Cluster Info"
+      to: "/pipelines/generic-runner?title=tp-info"
+      config: pp-maintain-tp-info.yaml
+    - label: "Reset Postgres DB"
+      to: "/pipelines/helm-install?title=reset-postgres-db"
+      config: pp-maintain-tp-reset-postgres-db.yaml
+    - label: "Refresh Docker Registry token"
+      to: "/pipelines/generic-runner?title=refresh-docker-registry-token"
+      config: pp-maintain-tp-refresh-docker-token.yaml
 - label: "Pipelines"
   to: "/pipelines"
   icon: 'pi pi-fw pi-list'
