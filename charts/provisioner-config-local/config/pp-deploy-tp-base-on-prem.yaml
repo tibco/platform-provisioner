@@ -42,4 +42,4 @@ options:
   description: |
     Install Postgres database for TP Cluster
 recipe: |
-{{ .Files.Get "recipes/pp-deploy-tp-base-on-prem.yaml" | indent 2 }}
+{{ .Files.Get "recipes/tp-base-on-prem.yaml" | indent 2 }}

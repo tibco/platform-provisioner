@@ -70,4 +70,4 @@ options:
   guiType: checkbox
   reference: "meta.guiEnv.GUI_PIPELINE_LOG_DEBUG"
 recipe: |
-{{ .Files.Get "recipes/pp-deploy-tp-base-on-prem-cert.yaml" | indent 2 }}
+{{ .Files.Get "recipes/tp-base-on-prem-https.yaml" | indent 2 }}
