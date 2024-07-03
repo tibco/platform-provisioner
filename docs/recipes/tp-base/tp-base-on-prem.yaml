@@ -36,7 +36,7 @@ meta:
     TP_DB_NAME: postgres
     TP_DB_SECRET_NAME: provider-cp-database-credentials # not used
     # flow control
-    TP_INSTALL_CERT_MANAGER: true
+    TP_INSTALL_CERT_MANAGER: ${GUI_TP_INSTALL_CERT_MANAGER:-"true"}
     TP_INSTALL_METRICS_SERVER: true
   tools:
     yq: "4.40"

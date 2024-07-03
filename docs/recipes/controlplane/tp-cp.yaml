@@ -76,6 +76,7 @@ meta:
     CP_STORAGE_CREATE_PV: ${GUI_CP_STORAGE_CREATE_PV:-false} # create PV for control-plane-pv for Kind, MicroK8s and Azure use case
     CP_INSTALL_PLATFORM_BOOTSTRAP: true
     CP_INSTALL_PLATFORM_BASE: true
+    CP_INSTALL_MESSAGING: ${GUI_CP_INSTALL_MESSAGING:-true}
   tools:
     yq: "4.40"
     helm: "3.13"
@@ -590,6 +591,7 @@ helmCharts:
           SENDGRID_SERVICE_API_KEY: "${CP_IDM_SENDGRID_SERVICE_API_KEY}" # for email service
           CP_ENCRYPTION_SECRET: "${CP_IDM_CP_ENCRYPTION_SECRET}"
       tp-cp-msg-contrib:
+        enabled: ${CP_INSTALL_MESSAGING}
         cp:
           enableSecurityContext: false
       tp-cp-integration:
