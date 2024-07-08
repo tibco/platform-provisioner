@@ -33,6 +33,7 @@ meta:
     CP_STORAGE_PV_SIZE: "${GUI_CP_STORAGE_PV_SIZE:-10Gi}"
     # container registry
     CP_CONTAINER_REGISTRY: ${GUI_CP_CONTAINER_REGISTRY:-"csgprduswrepoedge.jfrog.io"}
+    CP_CONTAINER_REPO: ${GUI_CP_CONTAINER_REPO:-"tibco-platform-docker-prod"}
     CP_CONTAINER_REGISTRY_USERNAME: "${GUI_CP_CONTAINER_REGISTRY_USERNAME}"
     CP_CONTAINER_REGISTRY_PASSWORD: "${GUI_CP_CONTAINER_REGISTRY_PASSWORD}"
     # node
@@ -406,6 +407,7 @@ helmCharts:
               enabled: false
           containerRegistry:
             password: "${CP_CONTAINER_REGISTRY_PASSWORD}"
+            repository: ${CP_CONTAINER_REPO}
             url: ${CP_CONTAINER_REGISTRY}
             username: "${CP_CONTAINER_REGISTRY_USERNAME}"
           controlPlaneInstanceId: ${CP_INSTANCE_ID}
