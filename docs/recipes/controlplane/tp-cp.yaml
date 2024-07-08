@@ -59,7 +59,7 @@ meta:
     CP_IDM_CP_ENCRYPTION_SECRET: ${GUI_CP_IDM_CP_ENCRYPTION_SECRET:-"dummy-encryption-secret"}
     # CP ingress
     CP_INGRESS_CLASSNAME: ${GUI_CP_INGRESS_CLASSNAME:-nginx} # the ingress for CP
-    CP_SKIP_BOOTSTRAP_INGRESS: false # set to false will create ingress for router and hybrid-prox
+    CP_SKIP_BOOTSTRAP_INGRESS: false # set to false will create ingress for router and hybrid-proxy
     CP_ALB_CERTIFICATE_ARN: "" # AWS ACM certificate ARN for ALB
     CP_NLB_CERTIFICATE_ARN: "" # AWS ACM certificate ARN for NLB
     TP_TLS_CERT: "" # if provided; will create secret tp-certificate with tls.crt and tls.key and create ingress
@@ -487,7 +487,7 @@ helmCharts:
                     pathType: Prefix
                     backend:
                       service:
-                        name: hybrid-proxy
+                        name: hybrid-proxy  # CP_PROVIDER must set to local to create this service
                         port:
                           number: 105
         EOF
