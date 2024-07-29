@@ -650,6 +650,7 @@ helmCharts:
                   memory: "150Mi"
         tp-cp-integration-flogo:
           flogo-webserver:
+            enabled: false
             flogowebserver:
               resources:
                 requests:
@@ -677,6 +678,7 @@ helmCharts:
                 cpu: 200m
                 memory: 200Mi
         tp-cp-flogo-utilities:
+            enabled: false
             resources:
               requests:
                 cpu: 80m
