@@ -8,7 +8,7 @@
 # https://docs.aws.amazon.com/cli/latest/userguide/getting-started-source-install.html#source-getting-started-install-workflows-alpine
 # release notes: https://raw.githubusercontent.com/aws/aws-cli/v2/CHANGELOG.rst
 
-FROM --platform=$BUILDPLATFORM python:3.11-alpine3.19 as builder-aws
+FROM --platform=$BUILDPLATFORM python:3.11-alpine3.19 AS builder-aws
 ARG AWS_CLI_VERSION
 ENV AWS_CLI_VERSION=${AWS_CLI_VERSION:-"2.17.13"}
 
@@ -33,7 +33,7 @@ RUN apk add --no-cache \
 # https://github.com/Azure/azure-cli/issues/19591
 # https://github.com/Azure/azure-cli/releases
 
-FROM --platform=$BUILDPLATFORM python:3.11-alpine3.19 as builder-azure
+FROM --platform=$BUILDPLATFORM python:3.11-alpine3.19 AS builder-azure
 ARG AZURE_CLI_VERSION
 ENV AZURE_CLI_VERSION=${AZURE_CLI_VERSION:-"2.62.0"}
 WORKDIR /azure
@@ -69,9 +69,23 @@ COPY --from=builder-azure /azure /azure
 RUN ln -s /usr/bin/python3 /usr/local/bin/python && ln -s /azure/.venv/bin/az /usr/local/bin/az && \
     az version
 
+# gcloud cli  https://cloud.google.com/sdk/docs/install
+ARG CLOUD_SDK_VERSION
+ENV CLOUD_SDK_VERSION=${CLOUD_SDK_VERSION:-"427.0.0"}
+ENV PATH=/google-cloud-sdk/bin:$PATH
+RUN if [ `uname -m` = 'x86_64' ]; then echo -n "x86_64" > /tmp/arch; else echo -n "arm" > /tmp/arch; fi;
+RUN ARCH=`cat /tmp/arch` && \
+    curl -O https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-${CLOUD_SDK_VERSION}-linux-${ARCH}.tar.gz && \
+    tar xzf google-cloud-cli-${CLOUD_SDK_VERSION}-linux-${ARCH}.tar.gz && \
+    rm google-cloud-cli-${CLOUD_SDK_VERSION}-linux-${ARCH}.tar.gz && \
+    gcloud config set core/disable_usage_reporting true && \
+    gcloud config set component_manager/disable_update_check true && \
+    gcloud config set metrics/environment docker_image_alpine && \
+    gcloud --version
+
 # eksctl https://github.com/eksctl-io/eksctl/releases
 ARG EKSCTL_VERSION
-ENV EKSCTL_VERSION=${EKSCTL_VERSION:-"v0.186.0"}
+ENV EKSCTL_VERSION=${EKSCTL_VERSION:-"v0.187.0"}
 RUN CMD_NAME=eksctl && \
     curl --silent --location "https://github.com/eksctl-io/eksctl/releases/download/${EKSCTL_VERSION}/${CMD_NAME}_$(uname -s)_${TARGETARCH}.tar.gz" | tar xz -C /tmp && \
     chmod +x /tmp/${CMD_NAME} && mv /tmp/${CMD_NAME} /usr/local/bin/${CMD_NAME}-${EKSCTL_VERSION} && \
@@ -112,28 +126,33 @@ RUN ln -sf /usr/bin/yq /usr/local/bin/yq4
 
 # The following are for recipe meta.tools compatibility
 # yq 4 utility https://github.com/mikefarah/yq/releases
+ARG YQ_VERSION_440
 ENV YQ_VERSION_440=${YQ_VERSION_440:-"v4.44.1"}
 RUN CMD_NAME=yq && \
     curl -sSLo /usr/local/bin/${CMD_NAME}-4.40 "https://github.com/mikefarah/${CMD_NAME}/releases/download/${YQ_VERSION_440}/${CMD_NAME}_${TARGETOS}_${TARGETARCH}" && \
     chmod +x /usr/local/bin/${CMD_NAME}-4.40
 
 # helm https://github.com/helm/helm/releases
+ARG HELM_VERSION_314
 ENV HELM_VERSION_314=${HELM_VERSION_314:-"v3.14.4"}
 RUN CMD_NAME=helm && \
     curl --silent --location "https://get.helm.sh/${CMD_NAME}-${HELM_VERSION_314}-${TARGETOS}-${TARGETARCH}.tar.gz" | tar xz -C /tmp && \
     chmod +x /tmp/${TARGETOS}-${TARGETARCH}/${CMD_NAME} && mv -f /tmp/${TARGETOS}-${TARGETARCH}/${CMD_NAME} /usr/local/bin/${CMD_NAME}-3.14
 
+ARG HELM_VERSION_315
 ENV HELM_VERSION_315=${HELM_VERSION_315:-"v3.15.3"}
 RUN CMD_NAME=helm && \
     curl --silent --location "https://get.helm.sh/${CMD_NAME}-${HELM_VERSION_315}-${TARGETOS}-${TARGETARCH}.tar.gz" | tar xz -C /tmp && \
     chmod +x /tmp/${TARGETOS}-${TARGETARCH}/${CMD_NAME} && mv -f /tmp/${TARGETOS}-${TARGETARCH}/${CMD_NAME} /usr/local/bin/${CMD_NAME}-3.15
 
 # kubectl https://kubernetes.io/releases/
+ARG KUBECTL_VERSION_129
 ENV KUBECTL_VERSION_129=${KUBECTL_VERSION_129:-"v1.29.4"}
 RUN CMD_NAME=kubectl && \
     curl -sLO https://storage.googleapis.com/kubernetes-release/release/${KUBECTL_VERSION_129}/bin/${TARGETOS}/${TARGETARCH}/${CMD_NAME} && \
     chmod +x ./${CMD_NAME} && mv -f ./${CMD_NAME} /usr/local/bin/${CMD_NAME}-1.29
 
+ARG KUBECTL_VERSION_130
 ENV KUBECTL_VERSION_130=${KUBECTL_VERSION_130:-"v1.30.0"}
 RUN CMD_NAME=kubectl && \
     curl -sLO https://storage.googleapis.com/kubernetes-release/release/${KUBECTL_VERSION_130}/bin/${TARGETOS}/${TARGETARCH}/${CMD_NAME} && \
